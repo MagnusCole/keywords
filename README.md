@@ -83,3 +83,18 @@ Run Task: test
 
 - Copia `.env.example` a `.env` y ajusta los valores.
 - `.env` está ignorado en git.
+
+## 📈 Dashboard y Demos
+
+- Dashboard (Streamlit):
+	```powershell
+	streamlit run dashboard.py
+	```
+- Demo local (sin scraping):
+	```powershell
+	python tools/demo.py
+	```
+- Utilidad de debug de Google (inspección HTML):
+	```powershell
+	python tools/debug_google.py
+	```
