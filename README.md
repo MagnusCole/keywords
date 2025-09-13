@@ -4,27 +4,41 @@ Herramienta automática de descubrimiento de keywords para AQXION.
 
 ## 🚀 Instalación
 
-```bash
+```powershell
+python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -U pip; pip install -r requirements.txt
+```
+# Keyword Finder 🔍
+
+Herramienta automática de descubrimiento de keywords (Google Autocomplete + Trends), scoring y exportación.
+
+## 🚀 Instalación
+
+```powershell
+python -m venv .venv; .\.venv\Scripts\Activate.ps1
+pip install -U pip
 pip install -r requirements.txt
 ```
 
 ## 💻 Uso
 
-```bash
+```powershell
 # Buscar keywords desde seeds
 python main.py --seeds "marketing pymes" "limpieza piscinas Lima"
 
-# Exportar top 20 keywords
-python main.py --seeds "marketing digital" --export csv,pdf
+# Exportar top 20 keywords (CSV y PDF)
+python main.py --seeds "marketing digital" --export csv pdf
 
-# Ejecutar análisis completo
-python main.py --seeds "marketing pymes" --full-analysis
+# Mostrar estadísticas de la base de datos
+python main.py --stats
+
+# Mostrar keywords ya guardadas
+python main.py --existing --limit 20
 ```
 
-## 📊 Features
+## � Features
 
 - ✅ Google Autocomplete scraping
-- ✅ Google Trends integration  
+- ✅ Google Trends integration
 - ✅ Scoring automático (trend + volume + competition)
 - ✅ Export CSV/PDF
 - ✅ Base SQLite para persistencia
@@ -38,14 +52,34 @@ keyword-finder/
 │   ├── database.py      # SQLite operations
 │   ├── scrapers.py      # Google scrapers
 │   ├── scoring.py       # Keyword scoring
+│   ├── trends.py        # Google Trends integration
 │   └── exporters.py     # CSV/PDF exports
-├── exports/             # Generated reports
-├── main.py             # CLI entry point
-└── requirements.txt
+├── tools/               # Utilidades locales de debug (no producción)
+├── tests/               # Unit tests
+├── exports/             # Reportes generados
+├── main.py              # CLI entry point
+├── requirements.txt     # Dependencias de runtime
+├── requirements-dev.txt # Dependencias de desarrollo (opcional)
+└── pyproject.toml       # Black/Ruff/Mypy/Pytest config
 ```
 
-## 🎯 Output
+## 🧪 Desarrollo
 
-- **CSV**: Todas las keywords con scores
-- **PDF**: Top 20 keywords + recomendaciones
-- **SQLite**: Histórico completo
+- Herramientas configuradas en `pyproject.toml` (Black, Ruff, Mypy, Pytest)
+- Tareas VS Code en `.vscode/tasks.json`:
+
+```powershell
+# Formatear y auto-fix de lint
+Run Task: fmt
+
+# Lint + tipos
+Run Task: lint
+
+# Tests
+Run Task: test
+```
+
+## 🔐 Variables de entorno
+
+- Copia `.env.example` a `.env` y ajusta los valores.
+- `.env` está ignorado en git.

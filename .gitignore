@@ -17,5 +17,7 @@ exports/*.pdf
 .coverage
 htmlcov/
 .env.local
+.env
+.vscode/
 .DS_Store
 Thumbs.db
