@@ -28,6 +28,9 @@ python main.py --seeds "marketing pymes" "limpieza piscinas Lima"
 # Exportar top 20 keywords (CSV y PDF)
 python main.py --seeds "marketing digital" --export csv pdf
 
+# Leer seeds desde archivo
+python main.py --seeds-file seeds.txt
+
 # Mostrar estadísticas de la base de datos
 python main.py --stats
 
@@ -37,7 +40,8 @@ python main.py --existing --limit 20
 
 ## � Features
 
-- ✅ Google Autocomplete scraping
+- ✅ Google Autocomplete scraping (con variaciones)
+- ✅ YouTube Autocomplete (sugerencias de vídeo)
 - ✅ Google Trends integration
 - ✅ Scoring automático (trend + volume + competition)
 - ✅ Export CSV/PDF

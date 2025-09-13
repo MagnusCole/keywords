@@ -9,7 +9,9 @@ from scoring import KeywordScorer
 
 def test_calculate_score_basic():
     scorer = KeywordScorer(trend_weight=0.4, volume_weight=0.4, competition_weight=0.2)
-    score = scorer.calculate_score(trend_score=50, volume=1000, competition=0.5, keyword_text="curso marketing digital")
+    score = scorer.calculate_score(
+        trend_score=50, volume=1000, competition=0.5, keyword_text="curso marketing digital"
+    )
     assert 0 <= score <= 100
 
 
@@ -26,3 +28,19 @@ def test_bonus_long_tail_and_terms():
     base = scorer.calculate_score(50, 1000, 0.5, keyword_text="marketing")
     boosted = scorer.calculate_score(50, 1000, 0.5, keyword_text=kw)
     assert boosted >= base
+
+
+def test_single_word_penalty():
+    scorer = KeywordScorer()
+    single = scorer.calculate_score(50, 1000, 0.5, keyword_text="marketing")
+    multi = scorer.calculate_score(50, 1000, 0.5, keyword_text="como hacer marketing para pymes")
+    assert multi > single
+
+
+def test_question_bonus():
+    scorer = KeywordScorer()
+    base = scorer.calculate_score(50, 1000, 0.5, keyword_text="marketing de contenidos")
+    question = scorer.calculate_score(
+        50, 1000, 0.5, keyword_text="como hacer marketing de contenidos"
+    )
+    assert question > base

@@ -2,6 +2,7 @@
 """Debug utility to inspect Google Search HTML locally (non-shipping)."""
 
 import asyncio
+
 import httpx
 from selectolax.parser import HTMLParser
 
@@ -21,7 +22,9 @@ async def debug_google_html() -> None:
             f.write(html)
         parser = HTMLParser(html)
         # Print a few sample text nodes for manual inspection
-        print(f"Status: {r.status_code}; HTML length: {len(html)}; sample nodes: {len(parser.css('h3'))}")
+        print(
+            f"Status: {r.status_code}; HTML length: {len(html)}; sample nodes: {len(parser.css('h3'))}"
+        )
 
 
 if __name__ == "__main__":
