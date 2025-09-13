@@ -1,0 +1,21 @@
+# Keyword Finder - Sistema de logging y debugging
+keywords.db
+*.log
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+exports/*.csv
+exports/*.pdf
+.pytest_cache/
+.coverage
+htmlcov/
+.env.local
+.DS_Store
+Thumbs.db
