@@ -44,3 +44,74 @@ def test_question_bonus():
         50, 1000, 0.5, keyword_text="como hacer marketing de contenidos"
     )
     assert question > base
+
+
+def test_volume_estimation():
+    scorer = KeywordScorer()
+
+    # Single words should have high estimated volume
+    single_vol = scorer.estimate_volume("marketing")
+    assert single_vol > 5000
+
+    # Long-tail should have lower volume
+    longtail_vol = scorer.estimate_volume(
+        "como hacer un curso de marketing digital completo gratis"
+    )
+    assert longtail_vol < single_vol
+
+    # Question keywords should have moderate boost
+    question_vol = scorer.estimate_volume("que es marketing digital")
+    base_vol = scorer.estimate_volume("marketing digital")
+    assert question_vol > base_vol
+
+
+def test_competition_estimation():
+    scorer = KeywordScorer()
+
+    # Single words should have high competition
+    single_comp = scorer.estimate_competition("marketing")
+    assert single_comp > 0.7
+
+    # Long-tail should have lower competition
+    longtail_comp = scorer.estimate_competition("como hacer marketing para pymes locales")
+    assert longtail_comp < single_comp
+
+    # Commercial terms should increase competition
+    commercial_comp = scorer.estimate_competition("mejor curso marketing precio")
+    base_comp = scorer.estimate_competition("marketing digital")
+    assert commercial_comp >= base_comp
+
+
+def test_keyword_categorization():
+    scorer = KeywordScorer()
+
+    assert scorer.categorize_keyword("seo para empresas") == "seo"
+    assert scorer.categorize_keyword("marketing en redes sociales") == "redes_sociales"
+    assert scorer.categorize_keyword("curso de marketing digital") == "educacion"
+    assert scorer.categorize_keyword("herramientas de marketing") == "herramientas"
+    assert scorer.categorize_keyword("agencia de marketing") == "servicios"
+    assert scorer.categorize_keyword("precio curso marketing") == "comercial"
+    assert scorer.categorize_keyword("marketing online") == "digital"
+
+
+def test_deduplication():
+    scorer = KeywordScorer()
+
+    keywords_data = [
+        {"keyword": "como hacer marketing digital", "score": 25.0},
+        {"keyword": "como hacer marketing digital gratis", "score": 20.0},  # Similar
+        {"keyword": "herramientas de marketing", "score": 30.0},
+        {"keyword": "herramientas marketing", "score": 22.0},  # Similar
+        {"keyword": "curso seo", "score": 15.0},
+    ]
+
+    deduplicated = scorer.deduplicate_keywords(keywords_data, similarity_threshold=0.8)
+
+    # Should remove similar duplicates and keep higher scored ones
+    assert len(deduplicated) == 3  # Should remove 2 similar ones
+
+    # Check that higher scored ones are kept
+    keywords_text = [kw["keyword"] for kw in deduplicated]
+    assert "como hacer marketing digital" in keywords_text  # Higher score kept
+    assert "herramientas de marketing" in keywords_text  # Higher score kept
+    assert "curso seo" in keywords_text

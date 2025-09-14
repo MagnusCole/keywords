@@ -1,6 +1,7 @@
 import logging
 import math
 from datetime import datetime
+from difflib import SequenceMatcher
 
 from sklearn.preprocessing import MinMaxScaler
 
@@ -97,6 +98,129 @@ class KeywordScorer:
         log_max = math.log10(1000000)  # 1M como máximo
 
         return min(1.0, log_volume / log_max)
+
+    def estimate_volume(self, keyword: str) -> int:
+        """
+        Estima volumen de búsquedas basado en características del keyword
+        cuando no hay datos de Google Trends disponibles
+        """
+        if not keyword:
+            return 0
+
+        keyword_lower = keyword.lower().strip()
+        word_count = len(keyword_lower.split())
+
+        # Base según longitud (palabras más específicas = menos volumen)
+        if word_count == 1:
+            base_volume = 10000  # Términos genéricos altos
+        elif word_count == 2:
+            base_volume = 5000  # Términos de nivel medio
+        elif word_count <= 4:
+            base_volume = 2000  # Long-tail moderado
+        else:
+            base_volume = 500  # Very long-tail bajo
+
+        # Modificadores basados en intención
+        multiplier = 1.0
+
+        # Términos informativos (más volumen)
+        info_terms = ["que es", "qué es", "como", "cómo", "cuando", "cuándo", "donde", "dónde"]
+        if any(keyword_lower.startswith(term) for term in info_terms):
+            multiplier *= 1.5
+
+        # Términos comerciales (volumen moderado-alto)
+        commercial_terms = ["curso", "gratis", "online", "precio", "costo", "barato", "mejor"]
+        if any(term in keyword_lower for term in commercial_terms):
+            multiplier *= 1.3
+
+        # Términos de marca/localización (menos volumen)
+        location_terms = ["lima", "peru", "perú", "madrid", "mexico"]
+        if any(term in keyword_lower for term in location_terms):
+            multiplier *= 0.7
+
+        # Términos muy específicos (menos volumen)
+        specific_terms = ["herramientas de", "estrategia de", "plan de"]
+        if any(term in keyword_lower for term in specific_terms):
+            multiplier *= 0.6
+
+        estimated = int(base_volume * multiplier)
+        return max(10, min(100000, estimated))  # Entre 10 y 100k
+
+    def estimate_competition(self, keyword: str) -> float:
+        """
+        Estima nivel de competencia basado en características del keyword
+        """
+        if not keyword:
+            return 0.5
+
+        keyword_lower = keyword.lower().strip()
+        word_count = len(keyword_lower.split())
+
+        # Base según longitud (más palabras = menos competencia)
+        if word_count == 1:
+            base_competition = 0.9  # Muy competitivo
+        elif word_count == 2:
+            base_competition = 0.7  # Alto
+        elif word_count <= 4:
+            base_competition = 0.5  # Medio
+        else:
+            base_competition = 0.3  # Bajo
+
+        # Modificadores
+        modifier = 0.0
+
+        # Términos comerciales aumentan competencia
+        commercial_terms = ["curso", "precio", "comprar", "mejor", "top", "gratis"]
+        commercial_count = sum(1 for term in commercial_terms if term in keyword_lower)
+        modifier += commercial_count * 0.1
+
+        # Términos informativos reducen competencia
+        info_terms = ["que es", "qué es", "como hacer", "cómo hacer"]
+        if any(keyword_lower.startswith(term) for term in info_terms):
+            modifier -= 0.15
+
+        # Localización reduce competencia
+        location_terms = ["lima", "peru", "perú", "madrid", "mexico"]
+        if any(term in keyword_lower for term in location_terms):
+            modifier -= 0.1
+
+        final_competition = base_competition + modifier
+        return max(0.1, min(0.9, final_competition))
+
+    def categorize_keyword(self, keyword: str) -> str:
+        """
+        Categoriza automáticamente el keyword según su contenido
+        """
+        if not keyword:
+            return "otros"
+
+        keyword_lower = keyword.lower().strip()
+
+        # Categorías por patrones
+        if any(term in keyword_lower for term in ["seo", "posicionamiento", "google"]):
+            return "seo"
+        elif any(
+            term in keyword_lower
+            for term in ["redes sociales", "facebook", "instagram", "tiktok", "twitter"]
+        ):
+            return "redes_sociales"
+        elif any(term in keyword_lower for term in ["curso", "aprender", "estudiar", "tutorial"]):
+            return "educacion"
+        elif any(term in keyword_lower for term in ["contenido", "blog", "articulo", "redaccion"]):
+            return "contenidos"
+        elif any(
+            term in keyword_lower
+            for term in ["herramientas", "software", "aplicacion", "plataforma"]
+        ):
+            return "herramientas"
+        elif any(term in keyword_lower for term in ["agencia", "empresa", "negocio", "pymes"]):
+            return "servicios"
+        elif any(term in keyword_lower for term in ["precio", "costo", "gratis", "barato"]):
+            return "comercial"
+        elif any(term in keyword_lower for term in ["digital", "online", "internet"]):
+            return "digital"
+        else:
+            return "marketing_general"
 
     def _calculate_keyword_bonus(self, keyword: str) -> float:
         """Calcula bonificaciones basadas en características de la keyword"""
@@ -215,6 +339,74 @@ class KeywordScorer:
 
         logging.info(f"Scored {len(scored_keywords)} keywords")
         return scored_keywords
+
+    def deduplicate_keywords(
+        self, keywords_data: list[dict], similarity_threshold: float = 0.85
+    ) -> list[dict]:
+        """
+        Elimina keywords duplicados y muy similares
+
+        Args:
+            keywords_data: Lista de keywords con datos
+            similarity_threshold: Umbral de similitud (0.85 = 85% similar)
+
+        Returns:
+            Lista de keywords deduplicada
+        """
+        if not keywords_data:
+            return []
+
+        unique_keywords = []
+
+        for kw_data in keywords_data:
+            keyword = kw_data.get("keyword", "").strip().lower()
+            if not keyword:
+                continue
+
+            # Normalizar para comparación
+            normalized = self._normalize_keyword_for_comparison(keyword)
+
+            # Verificar si ya tenemos algo muy similar
+            is_duplicate = False
+
+            for existing in unique_keywords:
+                existing_keyword = existing.get("keyword", "").strip().lower()
+                existing_normalized = self._normalize_keyword_for_comparison(existing_keyword)
+
+                # Calcular similitud
+                similarity = self._calculate_similarity(normalized, existing_normalized)
+
+                if similarity >= similarity_threshold:
+                    is_duplicate = True
+                    # Conservar el de mayor score
+                    if kw_data.get("score", 0) > existing.get("score", 0):
+                        unique_keywords.remove(existing)
+                        unique_keywords.append(kw_data)
+                    break
+
+            if not is_duplicate:
+                unique_keywords.append(kw_data)
+
+        logging.info(f"Deduplication: {len(keywords_data)} -> {len(unique_keywords)} keywords")
+        return unique_keywords
+
+    def _normalize_keyword_for_comparison(self, keyword: str) -> str:
+        """Normaliza keyword para comparación de similitud"""
+        # Remover acentos, espacios extra, palabras de stop menores
+        import re
+
+        normalized = re.sub(r"\s+", " ", keyword.strip().lower())
+
+        # Remover artículos comunes que no afectan el significado
+        stop_words = ["el", "la", "los", "las", "un", "una", "de", "del", "en", "y", "o"]
+        words = normalized.split()
+        filtered_words = [word for word in words if word not in stop_words]
+
+        return " ".join(filtered_words)
+
+    def _calculate_similarity(self, keyword1: str, keyword2: str) -> float:
+        """Calcula similitud entre dos keywords usando SequenceMatcher"""
+        return SequenceMatcher(None, keyword1, keyword2).ratio()
 
     def rank_keywords(self, keywords_data: list[dict], filters: dict | None = None) -> list[dict]:
         """

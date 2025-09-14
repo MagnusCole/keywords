@@ -14,6 +14,7 @@ class Keyword:
     trend_score: float = 0.0
     competition: float = 0.0
     score: float = 0.0
+    category: str = ""
     last_seen: str | None = None
 
     def __post_init__(self):
@@ -42,6 +43,7 @@ class KeywordDatabase:
                     trend_score REAL DEFAULT 0.0,
                     competition REAL DEFAULT 0.0,
                     score REAL DEFAULT 0.0,
+                    category TEXT DEFAULT '',
                     last_seen TEXT NOT NULL,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
@@ -62,8 +64,8 @@ class KeywordDatabase:
                 conn.execute(
                     """
                     INSERT OR REPLACE INTO keywords 
-                    (keyword, source, volume, trend_score, competition, score, last_seen)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (keyword, source, volume, trend_score, competition, score, category, last_seen)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                     (
                         keyword.keyword,
@@ -72,6 +74,7 @@ class KeywordDatabase:
                         keyword.trend_score,
                         keyword.competition,
                         keyword.score,
+                        keyword.category,
                         keyword.last_seen,
                     ),
                 )
@@ -91,8 +94,8 @@ class KeywordDatabase:
                         conn.execute(
                             """
                             INSERT OR REPLACE INTO keywords 
-                            (keyword, source, volume, trend_score, competition, score, last_seen)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                            (keyword, source, volume, trend_score, competition, score, category, last_seen)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                             (
                                 keyword.keyword,
@@ -101,6 +104,7 @@ class KeywordDatabase:
                                 keyword.trend_score,
                                 keyword.competition,
                                 keyword.score,
+                                keyword.category,
                                 keyword.last_seen,
                             ),
                         )
@@ -156,6 +160,7 @@ class KeywordDatabase:
         trend_score: float | None = None,
         competition: float | None = None,
         score: float | None = None,
+        category: str | None = None,
     ) -> bool:
         """Actualiza métricas específicas de una keyword"""
         try:
@@ -174,6 +179,9 @@ class KeywordDatabase:
             if score is not None:
                 updates.append("score = ?")
                 params.append(score)
+            if category is not None:
+                updates.append("category = ?")
+                params.append(category)
 
             updates.append("last_seen = ?")
             params.append(datetime.now().isoformat())
@@ -188,7 +196,7 @@ class KeywordDatabase:
                 conn.commit()
                 return True
 
-        except sqlite3.Error as e:
+        except Exception as e:
             logging.error(f"Error updating keyword {keyword_text}: {e}")
             return False
 

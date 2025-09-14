@@ -102,14 +102,20 @@ class KeywordFinder:
 
         for seed, keywords in expanded_keywords.items():
             for keyword in keywords:
+                # Estimar volumen y competencia cuando no hay datos de trends
+                estimated_volume = self.scorer.estimate_volume(keyword)
+                estimated_competition = self.scorer.estimate_competition(keyword)
+                category = self.scorer.categorize_keyword(keyword)
+
                 all_keywords.append(
                     {
                         "keyword": keyword,
                         "source": f"google_{seed}",
-                        "volume": 0,
+                        "volume": estimated_volume,
                         "trend_score": 0.0,
-                        "competition": 0.5,
+                        "competition": estimated_competition,
                         "score": 0.0,
+                        "category": category,
                     }
                 )
 
@@ -149,7 +155,14 @@ class KeywordFinder:
                     if keyword_text in trends_data:
                         trend_info = trends_data[keyword_text]
                         keyword_data["trend_score"] = trend_info.get("trend_score", 0)
-                        keyword_data["volume"] = trend_info.get("volume_estimate", 0)
+                        # Solo sobrescribir volumen si trends da un valor mayor
+                        trends_volume = trend_info.get("volume_estimate", 0)
+                        if trends_volume > keyword_data["volume"]:
+                            keyword_data["volume"] = trends_volume
+
+        # Fase 3.5: Deduplicación semántica
+        logging.info("Phase 3.5: Removing duplicates and similar keywords")
+        all_keywords = self.scorer.deduplicate_keywords(all_keywords, similarity_threshold=0.85)
 
         # Fase 4: Scoring y ranking
         logging.info("Phase 4: Calculating scores and ranking")
@@ -166,6 +179,7 @@ class KeywordFinder:
                 trend_score=kw_data["trend_score"],
                 competition=kw_data["competition"],
                 score=kw_data["score"],
+                category=kw_data.get("category", ""),
             )
             keyword_objects.append(keyword_obj)
 
