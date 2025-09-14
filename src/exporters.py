@@ -335,3 +335,235 @@ class KeywordExporter:
             "categories_distribution": by_category,
             "top_10": keywords[:10],
         }
+
+    def export_cluster_report(
+        self, clusters: dict[str, list[dict]], filename: str | None = None
+    ) -> str:
+        """
+        Exporta cluster_report.csv según el plan de mejora
+        Una fila por keyword con información de cluster
+        """
+        if not filename:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"cluster_report_{timestamp}.csv"
+
+        filepath = self.export_dir / filename
+
+        try:
+            fieldnames = [
+                "cluster_id",
+                "cluster_label",
+                "keyword",
+                "intent",
+                "canonical",
+                "score",
+                "volume",
+                "competition",
+                "opp_score",
+                "source",
+                "category",
+                "geo",
+                "last_seen",
+            ]
+
+            with open(filepath, "w", newline="", encoding="utf-8") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+
+                for cluster_id, cluster_keywords in clusters.items():
+                    if not cluster_keywords:
+                        continue
+
+                    # Find canonical keyword (highest opportunity score)
+                    canonical_kw = ""
+                    max_opp_score = 0
+
+                    for kw_data in cluster_keywords:
+                        volume = kw_data.get("volume", 0)
+                        competition = kw_data.get("competition", 0.5)
+                        opp_score = volume * (1 - competition)
+
+                        if opp_score > max_opp_score:
+                            max_opp_score = opp_score
+                            canonical_kw = kw_data.get("keyword", "")
+
+                    # Write all keywords in cluster
+                    for kw_data in cluster_keywords:
+                        keyword = kw_data.get("keyword", "")
+                        volume = kw_data.get("volume", 0)
+                        competition = kw_data.get("competition", 0.5)
+                        opp_score = volume * (1 - competition)
+
+                        # Detect geography
+                        geo = (
+                            "PE"
+                            if any(term in keyword.lower() for term in ["lima", "perú", "peru"])
+                            else ""
+                        )
+
+                        row = {
+                            "cluster_id": cluster_id,
+                            "cluster_label": cluster_id.replace("_", " ").title(),
+                            "keyword": keyword,
+                            "intent": kw_data.get("intent", "informational"),
+                            "canonical": "TRUE" if keyword == canonical_kw else "FALSE",
+                            "score": kw_data.get("score", 0),
+                            "volume": volume,
+                            "competition": competition,
+                            "opp_score": round(opp_score, 2),
+                            "source": kw_data.get("source", ""),
+                            "category": kw_data.get("category", ""),
+                            "geo": geo,
+                            "last_seen": kw_data.get("last_seen", ""),
+                        }
+                        writer.writerow(row)
+
+            logging.info(f"Exported cluster report: {filepath}")
+            return str(filepath)
+
+        except Exception as e:
+            logging.error(f"Error exporting cluster report: {e}")
+            return ""
+
+    def export_clusters_summary(
+        self, clusters: dict[str, list[dict]], filename: str | None = None
+    ) -> str:
+        """
+        Exporta clusters_summary.csv según el plan de mejora
+        Una fila por cluster con estadísticas agregadas
+        """
+        if not filename:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"clusters_summary_{timestamp}.csv"
+
+        filepath = self.export_dir / filename
+
+        try:
+            fieldnames = [
+                "cluster_id",
+                "cluster_label",
+                "representative_kw",
+                "size",
+                "avg_score",
+                "sum_score",
+                "avg_volume",
+                "avg_competition",
+                "opp_score_sum",
+                "top_intent",
+                "geo",
+                "notes",
+            ]
+
+            with open(filepath, "w", newline="", encoding="utf-8") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+
+                cluster_summaries = []
+
+                for cluster_id, cluster_keywords in clusters.items():
+                    if not cluster_keywords:
+                        continue
+
+                    # Calculate statistics
+                    size = len(cluster_keywords)
+                    scores = [kw.get("score", 0) for kw in cluster_keywords]
+                    volumes = [kw.get("volume", 0) for kw in cluster_keywords]
+                    competitions = [kw.get("competition", 0.5) for kw in cluster_keywords]
+
+                    avg_score = sum(scores) / size if size > 0 else 0
+                    sum_score = sum(scores)
+                    avg_volume = sum(volumes) / size if size > 0 else 0
+                    avg_competition = sum(competitions) / size if size > 0 else 0.5
+
+                    # Calculate opportunity scores
+                    opp_scores = [
+                        vol * (1 - comp) for vol, comp in zip(volumes, competitions, strict=False)
+                    ]
+                    opp_score_sum = sum(opp_scores)
+
+                    # Find representative keyword (highest opportunity)
+                    best_kw = ""
+                    max_opp = 0
+                    for i, kw_data in enumerate(cluster_keywords):
+                        if opp_scores[i] > max_opp:
+                            max_opp = opp_scores[i]
+                            best_kw = kw_data.get("keyword", "")
+
+                    # Most common intent
+                    intents = [kw.get("intent", "informational") for kw in cluster_keywords]
+                    top_intent = (
+                        max(set(intents), key=intents.count) if intents else "informational"
+                    )
+
+                    # Geography detection
+                    has_geo = any(
+                        any(
+                            term in kw.get("keyword", "").lower()
+                            for term in ["lima", "perú", "peru"]
+                        )
+                        for kw in cluster_keywords
+                    )
+                    geo = "PE" if has_geo else ""
+
+                    # Generate notes
+                    notes = self._generate_cluster_notes(cluster_id, size, avg_volume, top_intent)
+
+                    cluster_summary = {
+                        "cluster_id": cluster_id,
+                        "cluster_label": cluster_id.replace("_", " ").title(),
+                        "representative_kw": best_kw,
+                        "size": size,
+                        "avg_score": round(avg_score, 2),
+                        "sum_score": round(sum_score, 2),
+                        "avg_volume": round(avg_volume, 0),
+                        "avg_competition": round(avg_competition, 2),
+                        "opp_score_sum": round(opp_score_sum, 2),
+                        "top_intent": top_intent,
+                        "geo": geo,
+                        "notes": notes,
+                    }
+
+                    cluster_summaries.append(cluster_summary)
+
+                # Sort by opportunity score (highest first)
+                cluster_summaries.sort(key=lambda x: x["opp_score_sum"], reverse=True)
+
+                # Write rows
+                for summary in cluster_summaries:
+                    writer.writerow(summary)
+
+            logging.info(f"Exported clusters summary: {filepath}")
+            return str(filepath)
+
+        except Exception as e:
+            logging.error(f"Error exporting clusters summary: {e}")
+            return ""
+
+    def _generate_cluster_notes(
+        self, cluster_id: str, size: int, avg_volume: float, intent: str
+    ) -> str:
+        """Generate actionable notes for cluster based on characteristics"""
+        notes = []
+
+        if cluster_id == "cursos_formacion":
+            notes.append("Landing 'Curso Marketing Digital Perú' + lead magnet")
+        elif cluster_id == "como_hacer_howto":
+            notes.append("Guía pilar + cluster de subtemas")
+        elif cluster_id == "servicios_lima_local":
+            notes.append("Landing servicio local + testimonios")
+        elif cluster_id == "marketing_contenidos":
+            notes.append("Pilar + plantillas PDF")
+        elif cluster_id == "seo_posicionamiento":
+            notes.append("Landing SEO PYMES + casos de estudio")
+
+        if intent == "transactional":
+            notes.append("Alta prioridad para conversión")
+        elif intent == "commercial":
+            notes.append("Lead generation opportunity")
+        elif intent == "informational" and avg_volume > 1000:
+            notes.append("Content marketing potential")
+
+        if size > 20:
+            notes.append(f"Gran cluster ({size} keywords)")
+
+        return " | ".join(notes) if notes else "Standard content approach"

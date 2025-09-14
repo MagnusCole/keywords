@@ -80,7 +80,7 @@ class KeywordFinder:
         seed_keywords: list[str],
         include_trends: bool = True,
         include_competitors: list[str] | None = None,
-    ) -> list[dict]:
+    ) -> tuple[list[dict], dict]:
         """
         Pipeline principal de búsqueda de keywords
 
@@ -90,7 +90,7 @@ class KeywordFinder:
             include_competitors: Lista de dominios competidores (opcional)
 
         Returns:
-            Lista de keywords rankeadas con scores
+            Tuple de (keywords rankeadas, clusters inteligentes)
         """
         logging.info(f"Starting keyword discovery for seeds: {seed_keywords}")
 
@@ -168,6 +168,11 @@ class KeywordFinder:
         logging.info("Phase 4: Calculating scores and ranking")
         scored_keywords = self.scorer.score_keywords_batch(all_keywords)
 
+        # Fase 4.5: Clustering inteligente de keywords
+        logging.info("Phase 4.5: Creating intelligent keyword clusters")
+        clusters = self.scorer.create_heuristic_clusters(scored_keywords)
+        logging.info(f"Created {len(clusters)} keyword clusters")
+
         # Fase 5: Guardar en base de datos
         logging.info("Phase 5: Saving to database")
         keyword_objects = []
@@ -186,10 +191,13 @@ class KeywordFinder:
         self.db.insert_keywords_batch(keyword_objects)
 
         logging.info(f"Keyword discovery completed. Found {len(scored_keywords)} keywords")
-        return scored_keywords
+        return scored_keywords, clusters
 
     async def generate_reports(
-        self, keywords: list[dict], export_formats: list[str] | None = None
+        self,
+        keywords: list[dict],
+        export_formats: list[str] | None = None,
+        clusters: dict | None = None,
     ) -> dict[str, str]:
         """
         Genera reportes en los formatos especificados
@@ -197,6 +205,7 @@ class KeywordFinder:
         Args:
             keywords: Lista de keywords procesadas
             export_formats: Formatos a exportar ['csv', 'pdf']
+            clusters: Clusters de keywords (opcional)
 
         Returns:
             Dict con paths de archivos generados
@@ -215,6 +224,20 @@ class KeywordFinder:
             csv_file = self.exporter.export_to_csv(keywords, f"keyword_analysis_{timestamp}.csv")
             generated_files["csv"] = csv_file
             logging.info(f"CSV report generated: {csv_file}")
+
+            # Exportar reportes de clusters si están disponibles
+            if clusters:
+                cluster_report_file = self.exporter.export_cluster_report(
+                    clusters, f"cluster_report_{timestamp}.csv"
+                )
+                cluster_summary_file = self.exporter.export_clusters_summary(
+                    clusters, f"clusters_summary_{timestamp}.csv"
+                )
+                generated_files["cluster_report"] = cluster_report_file
+                generated_files["cluster_summary"] = cluster_summary_file
+                logging.info(
+                    f"Cluster reports generated: {cluster_report_file}, {cluster_summary_file}"
+                )
 
         if "pdf" in export_formats:
             pdf_file = self.exporter.export_to_pdf(
@@ -370,7 +393,7 @@ Ejemplos de uso:
         )
 
         # Ejecutar búsqueda de keywords
-        keywords = await finder.find_keywords(
+        keywords, clusters = await finder.find_keywords(
             seed_keywords=all_seeds,
             include_trends=not args.no_trends,
             include_competitors=args.competitors,
@@ -394,7 +417,7 @@ Ejemplos de uso:
 
         # Generar reportes
         print(f"\n📄 Generando reportes en formatos: {', '.join(args.export)}")
-        reports = await finder.generate_reports(keywords, args.export)
+        reports = await finder.generate_reports(keywords, args.export, clusters)
 
         for format_type, filepath in reports.items():
             print(f"✅ {format_type.upper()}: {filepath}")

@@ -1,5 +1,7 @@
 import logging
 import math
+import re
+from collections import defaultdict
 from datetime import datetime
 from difflib import SequenceMatcher
 
@@ -196,8 +198,10 @@ class KeywordScorer:
 
         keyword_lower = keyword.lower().strip()
 
-        # Categorías por patrones
-        if any(term in keyword_lower for term in ["seo", "posicionamiento", "google"]):
+        # Priorizar términos comerciales (orden importa)
+        if any(term in keyword_lower for term in ["precio", "costo", "gratis", "barato"]):
+            return "comercial"
+        elif any(term in keyword_lower for term in ["seo", "posicionamiento", "google"]):
             return "seo"
         elif any(
             term in keyword_lower
@@ -215,12 +219,196 @@ class KeywordScorer:
             return "herramientas"
         elif any(term in keyword_lower for term in ["agencia", "empresa", "negocio", "pymes"]):
             return "servicios"
-        elif any(term in keyword_lower for term in ["precio", "costo", "gratis", "barato"]):
-            return "comercial"
         elif any(term in keyword_lower for term in ["digital", "online", "internet"]):
             return "digital"
         else:
             return "marketing_general"
+
+    def classify_intent(self, keyword: str) -> str:
+        """
+        Clasifica la intención del keyword en: Informational, Commercial, Transactional
+        """
+        if not keyword:
+            return "unknown"
+
+        keyword_lower = keyword.lower().strip()
+
+        # Informational intent patterns
+        info_patterns = [
+            r"\b(qué es|que es|cómo|como)\b",
+            r"\b(guía|tutorial|ejemplo|pasos)\b",
+            r"\b(aprende|aprender|definición)\b",
+        ]
+
+        # Commercial intent patterns
+        commercial_patterns = [
+            r"\b(mejor|top|vs|comparar)\b",
+            r"\b(precio|costo|barato|gratis)\b",
+            r"\b(curso|diplomado|clase)\b",
+            r"\b(reseña|review|opinión)\b",
+        ]
+
+        # Transactional intent patterns
+        transactional_patterns = [
+            r"\b(agencia|empresa|consultor)\b",
+            r"\b(servicio|contratar|comprar)\b",
+            r"\b(lima|perú|madrid)\b",  # Geographic = service intent
+            r"\b(para pymes|para empresas)\b",
+        ]
+
+        # Check patterns in order of priority
+        for pattern in transactional_patterns:
+            if re.search(pattern, keyword_lower):
+                return "transactional"
+
+        for pattern in commercial_patterns:
+            if re.search(pattern, keyword_lower):
+                return "commercial"
+
+        for pattern in info_patterns:
+            if re.search(pattern, keyword_lower):
+                return "informational"
+
+        return "informational"  # Default for most queries
+
+    def create_heuristic_clusters(self, keywords_data: list[dict]) -> dict[str, list[dict]]:
+        """
+        Crea clusters heurísticos basados en patrones de keywords
+        Implementa la estrategia del plan de mejora
+        """
+        clusters = defaultdict(list)
+
+        # Define clustering patterns (orden importa)
+        cluster_patterns = {
+            "cursos_formacion": [
+                r"\b(curso|clase|diplomado|certificado|capacitación)\b",
+                r"\b(aprender|estudiar|enseñar)\b",
+            ],
+            "como_hacer_howto": [
+                r"\b(cómo|como) (hacer|crear|desarrollar)\b",
+                r"\b(pasos|guía|tutorial)\b",
+            ],
+            "que_es_conceptos": [r"\b(qué es|que es|definición)\b", r"\b(significado|concepto)\b"],
+            "servicios_lima_local": [
+                r"\b(agencia|empresa|consultor)\b.*\b(lima|perú)\b",
+                r"\b(lima|perú)\b.*\b(agencia|empresa|consultor)\b",
+                r"\b(publicidad|marketing).*lima\b",
+            ],
+            "pymes_empresas": [
+                r"\b(pymes|empresas|negocios)\b",
+                r"\bpara (pequeñas|medianas) empresas\b",
+            ],
+            "redes_sociales": [
+                r"\b(redes sociales|facebook|instagram|tiktok|twitter)\b",
+                r"\b(social media|community manager)\b",
+            ],
+            "seo_posicionamiento": [r"\b(seo|posicionamiento)\b", r"\b(google|buscador|ranking)\b"],
+            "marketing_contenidos": [
+                r"\b(contenido|contenidos|blog)\b",
+                r"\b(copywriting|redacción)\b",
+            ],
+            "herramientas_software": [
+                r"\b(herramientas|software|aplicación|plataforma)\b",
+                r"\b(automatización|crm)\b",
+            ],
+            "digital_online": [r"\b(digital|online|internet)\b", r"\b(ecommerce|tienda online)\b"],
+        }
+
+        # Classify each keyword into clusters
+        for kw_data in keywords_data:
+            keyword = kw_data.get("keyword", "")
+            keyword_lower = keyword.lower()
+
+            # Find best cluster match
+            assigned = False
+            for cluster_name, patterns in cluster_patterns.items():
+                for pattern in patterns:
+                    if re.search(pattern, keyword_lower):
+                        clusters[cluster_name].append(
+                            {
+                                **kw_data,
+                                "cluster_id": cluster_name,
+                                "intent": self.classify_intent(keyword),
+                            }
+                        )
+                        assigned = True
+                        break
+                if assigned:
+                    break
+
+            # Default cluster for unmatched keywords
+            if not assigned:
+                clusters["marketing_general"].append(
+                    {
+                        **kw_data,
+                        "cluster_id": "marketing_general",
+                        "intent": self.classify_intent(keyword),
+                    }
+                )
+
+        return dict(clusters)
+
+    def identify_canonical_keywords(self, cluster_data: list[dict]) -> str:
+        """
+        Identifica la keyword canónica (representativa) del cluster
+        Basado en mayor volumen y menor competencia
+        """
+        if not cluster_data:
+            return ""
+
+        # Calculate opportunity score for each keyword
+        best_keyword = ""
+        best_score = 0
+
+        for kw_data in cluster_data:
+            volume = kw_data.get("volume", 0)
+            competition = kw_data.get("competition", 0.5)
+
+            # Simple opportunity formula
+            opp_score = volume * (1 - competition)
+
+            if opp_score > best_score:
+                best_score = opp_score
+                best_keyword = kw_data.get("keyword", "")
+
+        return best_keyword
+
+    def calculate_opportunity_score(
+        self, volume: int, competition: float, keyword: str = ""
+    ) -> float:
+        """
+        Calcula el opportunity score según el plan de mejora:
+        opp_score = norm(volume) * (1 - competition) * trend_boost * cluster_focus
+        """
+        if volume <= 0:
+            return 0.0
+
+        # Normalize volume (simple approach)
+        norm_volume = min(volume / 10000.0, 1.0)  # Cap at 10k
+
+        # Base opportunity score
+        base_score = norm_volume * (1 - competition)
+
+        # Trend boost (1.0 for now, can add trends data later)
+        trend_boost = 1.0
+
+        # Cluster focus boost for geographic/commercial terms
+        cluster_focus = 1.0
+        keyword_lower = keyword.lower() if keyword else ""
+
+        # Boost for Peru/Lima focus
+        if any(term in keyword_lower for term in ["lima", "perú", "peru"]):
+            cluster_focus *= 1.2
+
+        # Boost for PYMES focus
+        if any(term in keyword_lower for term in ["pymes", "empresas", "negocios"]):
+            cluster_focus *= 1.1
+
+        # Boost for commercial intent
+        if any(term in keyword_lower for term in ["curso", "precio", "servicio", "agencia"]):
+            cluster_focus *= 1.05
+
+        return base_score * trend_boost * cluster_focus
 
     def _calculate_keyword_bonus(self, keyword: str) -> float:
         """Calcula bonificaciones basadas en características de la keyword"""
@@ -356,7 +544,7 @@ class KeywordScorer:
         if not keywords_data:
             return []
 
-        unique_keywords = []
+        unique_keywords: list[dict] = []
 
         for kw_data in keywords_data:
             keyword = kw_data.get("keyword", "").strip().lower()
