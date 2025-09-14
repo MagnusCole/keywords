@@ -40,7 +40,7 @@ plugins = []
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-q --color=yes --strict-markers"
-testpaths = ["tests"]
+testpaths = ["."]
 
 [tool.coverage.run]
 branch = true
