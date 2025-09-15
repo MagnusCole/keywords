@@ -49,6 +49,9 @@ class KeywordExporter:
                 "trend_score",
                 "volume",
                 "competition",
+                "cluster_id",
+                "cluster_label",
+                "data_source",
                 "last_seen",
                 "category",
             ]
@@ -66,6 +69,9 @@ class KeywordExporter:
                         "trend_score": keyword.get("trend_score", 0),
                         "volume": keyword.get("volume", 0),
                         "competition": keyword.get("competition", 0),
+                        "cluster_id": keyword.get("cluster_id", ""),
+                        "cluster_label": keyword.get("cluster_label", ""),
+                        "data_source": keyword.get("data_source", "heurístico"),
                         "last_seen": keyword.get("last_seen", ""),
                         "category": self._categorize_keyword(keyword.get("score", 0)),
                     }
@@ -185,7 +191,16 @@ class KeywordExporter:
 
     def _prepare_table_data(self, keywords: list[dict]) -> list[list[str]]:
         """Prepara datos para la tabla del PDF"""
-        headers = ["Rank", "Keyword", "Score", "Trend", "Volume", "Competition", "Source"]
+        headers = [
+            "Rank",
+            "Keyword",
+            "Score",
+            "Trend",
+            "Volume",
+            "Competition",
+            "Source",
+            "Data Source",
+        ]
         table_data = [headers]
 
         for i, kw in enumerate(keywords, 1):
@@ -197,6 +212,7 @@ class KeywordExporter:
                 f"{kw.get('volume', 0):,}",
                 f"{kw.get('competition', 0):.2f}",
                 kw.get("source", "")[:15],
+                kw.get("data_source", "heurístico")[:12],
             ]
             table_data.append(row)
 

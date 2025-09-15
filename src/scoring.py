@@ -1,8 +1,11 @@
 import logging
 import math
+import os
 import re
 import statistics
 from datetime import datetime
+from difflib import SequenceMatcher
+from typing import cast
 
 
 # Legacy compatibility: alias para el scorer básico
@@ -50,8 +53,9 @@ class AdvancedKeywordScorer:
             target_geo: País objetivo (PE, ES, MX, etc.)
             target_intent: Intención objetivo (transactional, commercial, informational)
         """
-        self.target_geo = target_geo.lower()
-        self.target_intent = target_intent.lower()
+        # Load from env or use defaults
+        self.target_geo = os.getenv("SCORING_TARGET_GEO", target_geo).lower()
+        self.target_intent = os.getenv("SCORING_TARGET_INTENT", target_intent).lower()
 
         # Intent weights basados en valor de conversión
         self.intent_weights = {
@@ -70,19 +74,32 @@ class AdvancedKeywordScorer:
             "cl": ["chile", "santiago", "valparaíso", "concepción"],
         }
 
-        # Pesos del ensamble (suman 1.0)
+        # Pesos del ensamble configurable (suman 1.0) - BUSINESS OPTIMIZED
         self.weights = {
-            "trend": 0.28,
-            "volume": 0.22,
-            "serp_opportunity": 0.15,
-            "cluster_centrality": 0.12,
-            "intent": 0.10,
-            "geo": 0.08,
-            "freshness": 0.05,
+            "trend": float(
+                os.getenv("SCORING_WEIGHT_TREND", "0.20")
+            ),  # Reduced: trend ≠ business value
+            "volume": float(
+                os.getenv("SCORING_WEIGHT_VOLUME", "0.18")
+            ),  # Reduced: volume bias problem
+            "intent": float(
+                os.getenv("SCORING_WEIGHT_INTENT", "0.25")
+            ),  # INCREASED: business relevance
+            "geo": float(os.getenv("SCORING_WEIGHT_GEO", "0.15")),  # INCREASED: local targeting
+            "serp_opportunity": float(os.getenv("SCORING_WEIGHT_SERP", "0.12")),
+            "cluster_centrality": float(os.getenv("SCORING_WEIGHT_CLUSTER", "0.05")),  # Reduced
+            "freshness": float(os.getenv("SCORING_WEIGHT_FRESHNESS", "0.05")),
         }
 
+        # Normalize weights to ensure they sum to 1.0
+        total_weight = sum(self.weights.values())
+        if abs(total_weight - 1.0) > 0.01:
+            logging.warning(f"Scoring weights sum to {total_weight:.3f}, normalizing to 1.0")
+            for key in self.weights:
+                self.weights[key] /= total_weight
+
         logging.info(
-            f"AdvancedKeywordScorer initialized for {target_geo} targeting {target_intent} intent"
+            f"AdvancedKeywordScorer initialized for {self.target_geo} targeting {self.target_intent} intent"
         )
 
     def calculate_advanced_score(self, keywords_batch: list[dict]) -> list[dict]:
@@ -489,33 +506,49 @@ class AdvancedKeywordScorer:
         if not keywords:
             return 0.0
 
-        scores = [kw.get("advanced_score", kw.get("score", 0)) for kw in keywords]
-        if len(scores) < 2:
+        scores_vals: list[float] = []
+        for kw in keywords:
+            val = kw.get("advanced_score", kw.get("score", 0))
+            try:
+                scores_vals.append(float(val))
+            except Exception:
+                scores_vals.append(0.0)
+        if len(scores_vals) < 2:
             return 0.0
-
-        return statistics.variance(scores)
+        return float(statistics.variance(scores_vals))
 
     def _calculate_avg_word_count(self, keywords: list[dict]) -> float:
         """Calcula promedio de palabras por keyword"""
         if not keywords:
             return 0.0
 
-        word_counts = []
+        word_counts: list[int] = []
         for kw in keywords:
             keyword = kw.get("keyword", "")
             word_counts.append(len(keyword.split()))
 
-        return statistics.mean(word_counts) if word_counts else 0.0
+        return float(statistics.mean(word_counts)) if word_counts else 0.0
 
     def _check_targets_met(self, metrics: dict) -> dict:
         """Verifica si se cumplen las metas establecidas"""
+        ti = cast(dict, metrics.get("transactional_intent", {}))
+        gt = cast(dict, metrics.get("geo_targeting", {}))
+        sv = cast(dict, metrics.get("score_variance", {}))
+        aw = cast(dict, metrics.get("avg_word_count", {}))
+
+        new_ti = float(ti.get("new", 0.0))
+        target_ti = float(ti.get("target", 0.0))
+        new_gt = float(gt.get("new", 0.0))
+        target_gt = float(gt.get("target", 0.0))
+        new_sv = float(sv.get("new", 0.0))
+        old_sv = float(sv.get("old", new_sv))
+        new_aw = float(aw.get("new", 0.0))
+
         return {
-            "transactional_target": metrics["transactional_intent"]["new"]
-            >= metrics["transactional_intent"]["target"],
-            "geo_target": metrics["geo_targeting"]["new"] >= metrics["geo_targeting"]["target"],
-            "variance_improved": metrics["score_variance"]["new"]
-            < metrics["score_variance"]["old"],
-            "optimal_length": 2.0 <= metrics["avg_word_count"]["new"] <= 4.0,
+            "transactional_target": new_ti >= target_ti,
+            "geo_target": new_gt >= target_gt,
+            "variance_improved": new_sv < old_sv,
+            "optimal_length": 2.0 <= new_aw <= 4.0,
         }
 
 
@@ -562,3 +595,205 @@ class KeywordScorer(AdvancedKeywordScorer):
         except Exception as e:
             logging.error(f"Error in legacy calculate_score: {e}")
             return 0.0
+
+    # ---------- Métodos legacy requeridos por main.py ----------
+    def estimate_volume(self, keyword: str) -> int:
+        """Estimación heurística de volumen mensual (entero).
+
+        Reglas simples:
+        - 1 palabra: base alta
+        - 2-3 palabras: base media
+        - 4+ palabras: base menor (long-tail)
+        - Modificadores como "precio", "gratis", "curso" ajustan ligeramente.
+        """
+        if not keyword:
+            return 0
+
+        k = keyword.lower()
+        wc = len(k.split())
+
+        if wc <= 1:
+            base = 20000
+        elif wc == 2:
+            base = 8000
+        elif wc == 3:
+            base = 4000
+        elif wc == 4:
+            base = 2000
+        else:
+            base = 1200
+
+        # Ajustes por modificadores
+        if any(t in k for t in ["precio", "costo", "tarifa"]):
+            base = int(base * 0.9)
+        if any(t in k for t in ["gratis", "free"]):
+            base = int(base * 1.1)
+        if any(t in k for t in ["curso", "clase", "diplomado", "certificado"]):
+            base = int(base * 0.85)
+
+        # Boost leve por geotérminos (búsquedas locales)
+        if any(t in k for t in ["lima", "perú", "peru", "madrid", "cdmx"]):
+            base = int(base * 0.7)
+
+        return max(10, base)
+
+    def estimate_competition(self, keyword: str) -> float:
+        """Estimación heurística de competencia (0-1, mayor es más competitivo)."""
+        if not keyword:
+            return 0.5
+
+        k = keyword.lower()
+        wc = len(k.split())
+
+        # Base por longitud (más corto = más competitivo)
+        if wc <= 1:
+            comp = 0.85
+        elif wc == 2:
+            comp = 0.7
+        elif wc == 3:
+            comp = 0.55
+        elif wc == 4:
+            comp = 0.45
+        else:
+            comp = 0.35
+
+        # Términos comerciales suben competencia
+        if any(t in k for t in ["precio", "costo", "mejor", "top", "comprar", "contratar"]):
+            comp += 0.1
+        # Long-tail muy específica baja un poco
+        if wc >= 5:
+            comp -= 0.05
+
+        # Geo baja ligeramente dificultad general
+        if any(t in k for t in ["lima", "perú", "peru", "madrid", "cdmx"]):
+            comp -= 0.05
+
+        return float(max(0.1, min(0.95, comp)))
+
+    def categorize_keyword(self, keyword: str) -> str:
+        """Categoriza por tema principal simple (cursos, servicios, precios, gratis, geo, general)."""
+        if not keyword:
+            return "general"
+        k = keyword.lower()
+        if re.search(r"\b(curso|clase|diplomado|certificado)s?\b", k):
+            return "cursos"
+        if re.search(r"\b(agencia|empresa|servicio|proveedor|contratar)\b", k):
+            return "servicios"
+        if re.search(r"\b(precio|costo|tarifa|cuanto)\b", k):
+            return "precios"
+        if re.search(r"\b(gratis|free)\b", k):
+            return "gratis"
+        if re.search(r"\b(lima|perú|peru|madrid|cdmx|mexico|españa)\b", k):
+            return "geo"
+        return "general"
+
+    def deduplicate_keywords(
+        self, keywords_data: list[dict], similarity_threshold: float = 0.85
+    ) -> list[dict]:
+        """Elimina duplicados y casi-duplicados preservando mayor score.
+
+        Espera una lista de dicts con al menos 'keyword' y opcionalmente 'score'.
+        """
+
+        def normalize(text: str) -> str:
+            import unicodedata
+
+            t = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+            t = re.sub(r"[^a-z0-9\s]", " ", t.lower())
+            t = re.sub(r"\s+", " ", t).strip()
+            return t
+
+        seen: dict[str, dict] = {}
+        items = keywords_data or []
+        for item in items:
+            kw = item.get("keyword", "")
+            if not kw:
+                continue
+            norm = normalize(kw)
+
+            # Buscar similar existente
+            best_key = None
+            best_sim = 0.0
+            for existing_norm in seen.keys():
+                sim = SequenceMatcher(None, norm, existing_norm).ratio()
+                if sim > best_sim:
+                    best_sim = sim
+                    best_key = existing_norm
+
+            if best_sim >= similarity_threshold and best_key is not None:
+                # Mantener el de mayor score
+                current_best = seen[best_key]
+                if item.get("score", 0) > current_best.get("score", 0):
+                    seen[best_key] = item
+            else:
+                seen[norm] = item
+
+        return list(seen.values())
+
+    def score_keywords_batch(self, keywords_data: list[dict]) -> list[dict]:
+        """Calcula scores avanzados para un batch y mapea a 'score' manteniendo compatibilidad."""
+        results = self.calculate_advanced_score(keywords_data)
+        scored: list[dict] = []
+        # Mapear advanced_score->score y preservar campos
+        adv_by_kw = {r.get("keyword", f"{i}"): r for i, r in enumerate(results)}
+        for item in keywords_data:
+            kw = item.get("keyword", "")
+            enriched = adv_by_kw.get(kw, {}).copy()
+            merged = {**item, **enriched}
+            if "advanced_score" in merged:
+                merged["score"] = merged["advanced_score"]
+            scored.append(merged)
+        # Ordenar por score descendente
+        scored.sort(key=lambda x: x.get("score", 0), reverse=True)
+        return scored
+
+    def create_heuristic_clusters(self, keywords: list[dict]) -> dict[str, list[dict]]:
+        """Clustering simple basado en patrones semánticos frecuentes.
+
+        Clusters: cursos, servicios, precios, gratis, geo, online, guia, herramientas, otros
+        """
+        buckets: dict[str, list[dict]] = {
+            "cursos": [],
+            "servicios": [],
+            "precios": [],
+            "gratis": [],
+            "geo": [],
+            "online": [],
+            "guia": [],
+            "herramientas": [],
+            "otros": [],
+        }
+
+        for kw in keywords:
+            text = kw.get("keyword", "").lower()
+            if re.search(r"\b(curso|clase|diplomado|certificado)s?\b", text):
+                buckets["cursos"].append(kw)
+            elif re.search(r"\b(agencia|empresa|servicio|proveedor|contratar)\b", text):
+                buckets["servicios"].append(kw)
+            elif re.search(r"\b(precio|costo|tarifa|cuanto)\b", text):
+                buckets["precios"].append(kw)
+            elif re.search(r"\b(gratis|free)\b", text):
+                buckets["gratis"].append(kw)
+            elif re.search(r"\b(lima|perú|peru|madrid|cdmx|mexico|españa)\b", text):
+                buckets["geo"].append(kw)
+            elif re.search(r"\bonline\b", text):
+                buckets["online"].append(kw)
+            elif re.search(r"\bgu(í|i)a\b", text):
+                buckets["guia"].append(kw)
+            elif re.search(r"\bherramientas?\b", text):
+                buckets["herramientas"].append(kw)
+            else:
+                buckets["otros"].append(kw)
+
+        # Quitar clusters vacíos y asignar IDs
+        clusters: dict[str, list[dict]] = {}
+        cid = 1
+        for label, items in buckets.items():
+            if not items:
+                continue
+            # Ordenar cada cluster por score
+            items.sort(key=lambda x: x.get("score", x.get("advanced_score", 0)), reverse=True)
+            clusters[f"{cid:03d}_{label}"] = items
+            cid += 1
+
+        return clusters

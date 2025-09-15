@@ -112,7 +112,7 @@ class TrendsAnalyzer:
         regional_data: pd.DataFrame,
         related_queries: dict,
     ) -> dict:
-        """Analiza los datos de trends para una keyword específica"""
+        """Analiza los datos de trends para una keyword específica con manejo robusto de errores"""
         try:
             trend_data = {
                 "keyword": keyword,
@@ -122,50 +122,103 @@ class TrendsAnalyzer:
                 "seasonality": "stable",
                 "regional_interest": {},
                 "related_keywords": [],
+                "data_source": "heurístico",  # default, will update below
+                "data_quality": "low",  # will update based on real data availability
             }
 
-            # Analizar interés a lo largo del tiempo
-            if not interest_data.empty and keyword in interest_data.columns:
-                values = interest_data[keyword].dropna()
+            # Validación robusta para interest_data
+            has_interest_data = (
+                interest_data is not None
+                and hasattr(interest_data, "empty")
+                and hasattr(interest_data, "columns")
+                and not interest_data.empty
+                and keyword in interest_data.columns
+            )
 
-                if len(values) > 0:
-                    # Calcular score de tendencia (0-100)
-                    trend_data["trend_score"] = float(values.mean())
+            if has_interest_data:
+                try:
+                    values = interest_data[keyword].dropna()
+                    if len(values) > 0 and values.sum() > 0:  # Ensure we have meaningful data
+                        trend_data["trend_score"] = float(values.mean())
+                        trend_data["volume_estimate"] = int(
+                            values.max() * 100
+                        )  # Scale for better estimates
 
-                    # Estimar volumen relativo
-                    trend_data["volume_estimate"] = int(values.max())
+                        # Growth rate calculation with error handling
+                        if len(values) >= 2:
+                            try:
+                                recent_avg = values[-4:].mean() if len(values) >= 4 else values[-1]
+                                older_avg = values[:4].mean() if len(values) >= 4 else values[0]
+                                if older_avg > 0:
+                                    growth_rate = ((recent_avg - older_avg) / older_avg) * 100
+                                    trend_data["growth_rate"] = round(float(growth_rate), 2)
+                            except (ZeroDivisionError, TypeError) as e:
+                                logging.warning(f"Error calculating growth rate for {keyword}: {e}")
+                                trend_data["growth_rate"] = 0.0
 
-                    # Calcular tasa de crecimiento
-                    if len(values) >= 2:
-                        recent_avg = values[-4:].mean() if len(values) >= 4 else values[-1]
-                        older_avg = values[:4].mean() if len(values) >= 4 else values[0]
+                        trend_data["seasonality"] = self._determine_seasonality(values)
+                        trend_data["data_source"] = "trends"
+                        trend_data["data_quality"] = "high"
 
-                        if older_avg > 0:
-                            growth_rate = ((recent_avg - older_avg) / older_avg) * 100
-                            trend_data["growth_rate"] = round(growth_rate, 2)
+                except Exception as e:
+                    logging.warning(f"Error processing interest data for {keyword}: {e}")
+            else:
+                logging.debug(f"No valid interest data for {keyword}")
 
-                    # Determinar estacionalidad
-                    trend_data["seasonality"] = self._determine_seasonality(values)
+            # Validación robusta para regional_data
+            has_regional_data = (
+                regional_data is not None
+                and hasattr(regional_data, "empty")
+                and hasattr(regional_data, "columns")
+                and not regional_data.empty
+                and keyword in regional_data.columns
+            )
 
-            # Analizar datos regionales
-            if not regional_data.empty and keyword in regional_data.columns:
-                regional_interest = regional_data[keyword].dropna().to_dict()
-                trend_data["regional_interest"] = {
-                    k: v for k, v in regional_interest.items() if v > 0
-                }
+            if has_regional_data:
+                try:
+                    regional_series = regional_data[keyword].dropna()
+                    if len(regional_series) > 0:
+                        regional_interest = regional_series.to_dict()
+                        trend_data["regional_interest"] = {
+                            str(k): float(v) for k, v in regional_interest.items() if v > 0
+                        }
+                except Exception as e:
+                    logging.warning(f"Error processing regional data for {keyword}: {e}")
 
-            # Extraer keywords relacionadas
-            if keyword in related_queries:
-                related = related_queries[keyword]
-                if related and "top" in related and not related["top"].empty:
-                    related_kws = related["top"]["query"].head(5).tolist()
-                    trend_data["related_keywords"] = related_kws
+            # Validación robusta para related_queries
+            if isinstance(related_queries, dict) and keyword in related_queries:
+                try:
+                    related = related_queries[keyword]
+                    if (
+                        related
+                        and isinstance(related, dict)
+                        and "top" in related
+                        and related["top"] is not None
+                        and hasattr(related["top"], "empty")
+                        and not related["top"].empty
+                        and "query" in related["top"].columns
+                    ):
+                        related_kws = related["top"]["query"].head(5).tolist()
+                        trend_data["related_keywords"] = [str(kw) for kw in related_kws if kw]
+                except Exception as e:
+                    logging.warning(f"Error processing related queries for {keyword}: {e}")
 
             return trend_data
 
         except Exception as e:
             logging.error(f"Error analyzing trends for {keyword}: {e}")
-            return self._empty_trend_data()
+            # Return safe fallback data
+            return {
+                "keyword": keyword,
+                "trend_score": 0.0,
+                "volume_estimate": 0,
+                "growth_rate": 0.0,
+                "seasonality": "unknown",
+                "regional_interest": {},
+                "related_keywords": [],
+                "data_source": "heurístico",
+                "data_quality": "error",
+            }
 
     def _determine_seasonality(self, values: pd.Series) -> str:
         """Determina el patrón de estacionalidad de una keyword"""
@@ -203,6 +256,8 @@ class TrendsAnalyzer:
             "seasonality": "no_data",
             "regional_interest": {},
             "related_keywords": [],
+            "data_source": "heurístico",
+            "data_quality": "no_data",
         }
 
     def get_trending_keywords(self, category: int = 0, geo: str = "ES") -> list[str]:

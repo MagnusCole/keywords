@@ -15,6 +15,9 @@ class Keyword:
     competition: float = 0.0
     score: float = 0.0
     category: str = ""
+    cluster_id: int | None = None
+    cluster_label: str | None = None
+    data_source: str = "heurístico"
     last_seen: str | None = None
 
     def __post_init__(self):
@@ -44,6 +47,9 @@ class KeywordDatabase:
                     competition REAL DEFAULT 0.0,
                     score REAL DEFAULT 0.0,
                     category TEXT DEFAULT '',
+                    cluster_id INTEGER,
+                    cluster_label TEXT,
+                    data_source TEXT DEFAULT 'heurístico',
                     last_seen TEXT NOT NULL,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
@@ -57,6 +63,18 @@ class KeywordDatabase:
 
             conn.commit()
 
+            # Migration: add cluster columns if missing
+            try:
+                cursor = conn.execute("PRAGMA table_info(keywords)")
+                cols = {row[1] for row in cursor.fetchall()}
+                if "cluster_id" not in cols:
+                    conn.execute("ALTER TABLE keywords ADD COLUMN cluster_id INTEGER")
+                if "cluster_label" not in cols:
+                    conn.execute("ALTER TABLE keywords ADD COLUMN cluster_label TEXT")
+                conn.commit()
+            except sqlite3.Error as e:
+                logging.warning(f"Schema migration check/add failed: {e}")
+
     def insert_keyword(self, keyword: Keyword) -> bool:
         """Inserta o actualiza una keyword en la base de datos"""
         try:
@@ -64,8 +82,8 @@ class KeywordDatabase:
                 conn.execute(
                     """
                     INSERT OR REPLACE INTO keywords 
-                    (keyword, source, volume, trend_score, competition, score, category, last_seen)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    (keyword, source, volume, trend_score, competition, score, category, cluster_id, cluster_label, last_seen)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                     (
                         keyword.keyword,
@@ -75,6 +93,8 @@ class KeywordDatabase:
                         keyword.competition,
                         keyword.score,
                         keyword.category,
+                        keyword.cluster_id,
+                        keyword.cluster_label,
                         keyword.last_seen,
                     ),
                 )
@@ -94,8 +114,8 @@ class KeywordDatabase:
                         conn.execute(
                             """
                             INSERT OR REPLACE INTO keywords 
-                            (keyword, source, volume, trend_score, competition, score, category, last_seen)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            (keyword, source, volume, trend_score, competition, score, category, cluster_id, cluster_label, last_seen)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                             (
                                 keyword.keyword,
@@ -105,6 +125,8 @@ class KeywordDatabase:
                                 keyword.competition,
                                 keyword.score,
                                 keyword.category,
+                                keyword.cluster_id,
+                                keyword.cluster_label,
                                 keyword.last_seen,
                             ),
                         )

@@ -4,10 +4,61 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "keyword-finder"
-version = "0.1.0"
-description = "Keyword discovery tool with Google scraping, Trends, scoring, and exports"
+version = "1.0.0"
+description = "Advanced keyword research tool with machine learning clustering, Google Ads API integration, and business intelligence scoring"
 readme = "README.md"
 requires-python = ">=3.11"
+authors = [
+    {name = "AQXION", email = "info@aqxion.com"}
+]
+license = {text = "MIT"}
+keywords = ["keyword-research", "seo", "google-ads", "machine-learning", "marketing"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "httpx>=0.25.0",
+    "selectolax>=0.3.17",
+    "pytrends>=4.9.2",
+    "python-dotenv>=1.0.0",
+    "pandas>=2.1.0",
+    "brotli>=1.0.9",
+    "sentence-transformers==3.0.1",
+    "scikit-learn==1.5.2",
+    "matplotlib>=3.7.2",
+    "reportlab>=4.0.4",
+    "plotly>=5.15.0",
+    "google-ads==28.0.0.post1",
+    "streamlit>=1.25.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=23.9.1",
+    "ruff>=0.5.6",
+    "mypy>=1.11.0",
+    "pytest>=7.0.0",
+    "coverage[toml]>=7.4.0",
+    "py-spy>=0.3.14"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/your-username/keyword-finder"
+"Repository" = "https://github.com/your-username/keyword-finder"
+"Bug Tracker" = "https://github.com/your-username/keyword-finder/issues"
+"Documentation" = "https://github.com/your-username/keyword-finder#readme"
+
+[project.scripts]
+keyword-finder = "main:main"
 
 [tool.black]
 line-length = 100

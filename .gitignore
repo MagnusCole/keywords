@@ -1,12 +1,13 @@
-# Byte-compiled / optimized / DLL files
+# ============================================================================
+# KEYWORD FINDER - Production .gitignore
+# ============================================================================
+
+# Python
+# ----------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -18,6 +19,201 @@ lib/
 lib64/
 parts/
 sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+# ----------------------------------------------------------------------------
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.env/
+
+# Environment variables and secrets
+# ----------------------------------------------------------------------------
+.env
+.env.local
+.env.production
+.env.staging
+*.key
+*.pem
+*.crt
+client_secret*.json
+credentials.json
+google_ads_config.json
+
+# Project-specific files
+# ----------------------------------------------------------------------------
+# Database
+keywords.db
+keywords.db-*
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+keyword_finder_*.log
+logs/
+
+# Cache directories
+cache/
+.cache/
+*.cache
+tmp/
+temp/
+
+# Export files (optional - remove if you want to track some exports)
+exports/*.csv
+exports/*.pdf
+!exports/.gitkeep
+
+# Development and testing
+# ----------------------------------------------------------------------------
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Linting and formatting
+.ruff_cache/
+.pylint.d/
+
+# IDEs and editors
+# ----------------------------------------------------------------------------
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# System files
+# ----------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.tmp
+*.temp
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Additional project files to ignore
+# ----------------------------------------------------------------------------
+# Google API cache
+google_ads_cache.json
+ads_volume_cache.json
+
+# Scraped data
+scraped_data/
+raw_data/
+
+# Performance profiling
+*.prof
+*.pstats
+
+# Documentation builds
+docs/_build/
+site/
+
+# Backup files
+*.bak
+*.backup
+
+# OS generated files
+.directory
+.fseventsd
+.DocumentRevisions-V100
+.Trashes
 var/
 wheels/
 pip-wheel-metadata/

@@ -1,9 +1,22 @@
+# Core dependencies
 httpx>=0.25.0
 selectolax>=0.3.17
 pytrends>=4.9.2
 python-dotenv>=1.0.0
 pandas>=2.1.0
+brotli>=1.0.9
+
+# Machine Learning
+sentence-transformers==3.0.1
+scikit-learn==1.5.2
+
+# Visualization and Reports
 matplotlib>=3.7.2
 reportlab>=4.0.4
 plotly>=5.15.0
+
+# Google Ads API (Optional - system works without it)
+google-ads==28.0.0.post1
+
+# Optional: Dashboard UI
 streamlit>=1.25.0

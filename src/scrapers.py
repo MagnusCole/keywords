@@ -371,7 +371,7 @@ class GoogleScraper:
         if len(keywords) <= 1:
             return keywords
 
-        unique_keywords = []
+        unique_keywords: list[str] = []
 
         for keyword in keywords:
             normalized_keyword = self._normalize_for_dedup(keyword)

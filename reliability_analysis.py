@@ -190,7 +190,7 @@ class KeywordReliabilityAnalyzer:
 
         # Ejecutar scoring múltiples veces para verificar consistencia
         all_results = []
-        for run in range(3):
+        for _run in range(3):
             results = scorer.calculate_advanced_score(test_keywords.copy())
             all_results.append(results)
 

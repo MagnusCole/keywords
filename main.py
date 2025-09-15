@@ -7,6 +7,7 @@ Diseñado para AQXION
 import argparse
 import asyncio
 import logging
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -14,18 +15,33 @@ from pathlib import Path
 # Agregar src al path
 sys.path.append(str(Path(__file__).parent / "src"))
 
+from ads_volume import GoogleAdsVolumeProvider
+from categorization import KeywordCategorizer
+from clustering import SemanticClusterer
 from database import Keyword, KeywordDatabase
 from exporters import KeywordExporter
 from scoring import KeywordScorer
 from scrapers import CompetitorScraper, GoogleScraper
 from trends import TrendsAnalyzer
 
+from reliability_report import generate_reliability_report
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError as _e:
+    logging.debug(f"dotenv not loaded (module missing): {_e}")
+
 
 class KeywordFinder:
     """Orquestador principal del sistema de keyword finding"""
 
     def __init__(self, config: dict | None = None):
-        self.config = config or self._load_default_config()
+        base = self._load_default_config()
+        if config:
+            base.update(config)
+        self.config = base
         self._setup_logging()
 
         # Inicializar componentes
@@ -43,6 +59,11 @@ class KeywordFinder:
             competition_weight=self.config["competition_weight"],
         )
         self.exporter = KeywordExporter()
+        self.clusterer = SemanticClusterer(use_hdbscan=self.config.get("use_hdbscan", False))
+        self.ads_provider = GoogleAdsVolumeProvider()
+        self.categorizer = KeywordCategorizer(
+            target_geo=self.config["geo"], target_business="services"
+        )
 
         logging.info("KeywordFinder initialized successfully")
 
@@ -59,6 +80,13 @@ class KeywordFinder:
             "volume_weight": 0.4,
             "competition_weight": 0.2,
             "top_keywords_limit": 20,
+            # Semantic clustering & Ads volume
+            "semantic_clustering_mode": os.getenv("SEMANTIC_CLUSTERING", "auto"),  # auto|on|off
+            "use_hdbscan": os.getenv("USE_HDBSCAN", "false").lower() == "true",
+            "ads_volume_enabled": os.getenv("ADS_VOLUME", "on").lower() == "on",
+            # Geo/Language defaults
+            "geo": os.getenv("DEFAULT_GEO", "PE"),
+            "language": os.getenv("DEFAULT_LANGUAGE", "es"),
         }
 
     def _setup_logging(self):
@@ -80,7 +108,7 @@ class KeywordFinder:
         seed_keywords: list[str],
         include_trends: bool = True,
         include_competitors: list[str] | None = None,
-    ) -> tuple[list[dict], dict]:
+    ) -> tuple[list[dict], dict, list[dict]]:
         """
         Pipeline principal de búsqueda de keywords
 
@@ -90,7 +118,7 @@ class KeywordFinder:
             include_competitors: Lista de dominios competidores (opcional)
 
         Returns:
-            Tuple de (keywords rankeadas, clusters inteligentes)
+            Tuple de (keywords rankeadas, clusters inteligentes, keywords rechazadas)
         """
         logging.info(f"Starting keyword discovery for seeds: {seed_keywords}")
 
@@ -164,13 +192,63 @@ class KeywordFinder:
         logging.info("Phase 3.5: Removing duplicates and similar keywords")
         all_keywords = self.scorer.deduplicate_keywords(all_keywords, similarity_threshold=0.85)
 
-        # Fase 4: Scoring y ranking
-        logging.info("Phase 4: Calculating scores and ranking")
+        # Fase 3.7: Volúmenes reales desde Google Ads (si disponible)
+        if self.config.get("ads_volume_enabled", True):
+            try:
+                logging.info("Phase 3.7: Fetching real volumes from Google Ads (if configured)")
+                unique = [kw["keyword"] for kw in all_keywords]
+                ads_volumes = self.ads_provider.get_volumes(
+                    unique,
+                    geo=self.config.get("geo", "PE"),
+                    language=self.config.get("language", "es"),
+                )
+                if ads_volumes:
+                    for kwd in all_keywords:
+                        v = ads_volumes.get(kwd["keyword"])
+                        if v and v > 0:
+                            kwd["volume"] = int(v)
+            except Exception as e:
+                logging.warning(f"Ads volume integration failed; continuing with heuristics: {e}")
+
+        # Fase 4: Categorización y filtrado
+        logging.info("Phase 4: Categorizing and filtering keywords")
+        all_keywords, rejected_keywords = self.categorizer.filter_keywords(
+            all_keywords, min_priority=0.4
+        )
+        logging.info(
+            f"Filtered to {len(all_keywords)} relevant keywords, rejected {len(rejected_keywords)}"
+        )
+
+        # Fase 5: Scoring y ranking
+        logging.info("Phase 5: Calculating scores and ranking")
         scored_keywords = self.scorer.score_keywords_batch(all_keywords)
 
         # Fase 4.5: Clustering inteligente de keywords
         logging.info("Phase 4.5: Creating intelligent keyword clusters")
-        clusters = self.scorer.create_heuristic_clusters(scored_keywords)
+        # Semantic clustering with mode control and graceful fallback
+        clusters = {}
+        mode = self.config.get("semantic_clustering_mode", "auto").lower()
+        semantic = None
+        if mode != "off":
+            semantic = self.clusterer.fit_transform(scored_keywords)
+        if semantic and mode in ("auto", "on"):
+            for res in semantic:
+                label_slug = res.label.strip() or "cluster"
+                for item in res.keywords:
+                    item["cluster_id"] = res.cluster_id
+                    item["cluster_label"] = label_slug
+            clusters = {
+                f"{res.cluster_id:03d}_{res.label.replace(' ', '_')}": res.keywords
+                for res in semantic
+            }
+        else:
+            clusters = self.scorer.create_heuristic_clusters(scored_keywords)
+            for cid, items in clusters.items():
+                for it in items:
+                    it["cluster_id"] = int(cid.split("_", 1)[0]) if "_" in cid else 0
+                    it["cluster_label"] = (
+                        cid.split("_", 1)[1].replace("_", " ") if "_" in cid else cid
+                    )
         logging.info(f"Created {len(clusters)} keyword clusters")
 
         # Fase 5: Guardar en base de datos
@@ -185,13 +263,15 @@ class KeywordFinder:
                 competition=kw_data["competition"],
                 score=kw_data["score"],
                 category=kw_data.get("category", ""),
+                cluster_id=kw_data.get("cluster_id"),
+                cluster_label=kw_data.get("cluster_label"),
             )
             keyword_objects.append(keyword_obj)
 
         self.db.insert_keywords_batch(keyword_objects)
 
         logging.info(f"Keyword discovery completed. Found {len(scored_keywords)} keywords")
-        return scored_keywords, clusters
+        return scored_keywords, clusters, rejected_keywords
 
     async def generate_reports(
         self,
@@ -300,6 +380,31 @@ Ejemplos de uso:
     parser.add_argument("--no-trends", action="store_true", help="Omitir análisis de Google Trends")
 
     parser.add_argument(
+        "--ads-volume",
+        choices=["on", "off"],
+        default=os.getenv("ADS_VOLUME", "on"),
+        help="Usar Google Ads Keyword Planner para volúmenes reales (requiere credenciales)",
+    )
+
+    parser.add_argument(
+        "--semantic-clustering",
+        choices=["auto", "on", "off"],
+        default=os.getenv("SEMANTIC_CLUSTERING", "auto"),
+        help="Clustering semántico: auto intenta con fallback; on obliga; off desactiva",
+    )
+
+    parser.add_argument(
+        "--hdbscan",
+        action="store_true",
+        help="Intentar HDBSCAN para clustering denso si está instalado",
+    )
+
+    parser.add_argument("--geo", default=os.getenv("DEFAULT_GEO", "PE"), help="Geo país (ISO)")
+    parser.add_argument(
+        "--language", default=os.getenv("DEFAULT_LANGUAGE", "es"), help="Idioma (ISO)"
+    )
+
+    parser.add_argument(
         "--limit", type=int, default=20, help="Límite de keywords en reportes (default: 20)"
     )
 
@@ -316,7 +421,15 @@ Ejemplos de uso:
     args = parser.parse_args()
 
     # Crear instancia del keyword finder
-    finder = KeywordFinder()
+    finder = KeywordFinder(
+        config={
+            "semantic_clustering_mode": args.semantic_clustering,
+            "use_hdbscan": bool(args.hdbscan),
+            "ads_volume_enabled": args.ads_volume == "on",
+            "geo": args.geo,
+            "language": args.language,
+        }
+    )
 
     try:
         # Mostrar estadísticas
@@ -393,7 +506,7 @@ Ejemplos de uso:
         )
 
         # Ejecutar búsqueda de keywords
-        keywords, clusters = await finder.find_keywords(
+        keywords, clusters, rejected = await finder.find_keywords(
             seed_keywords=all_seeds,
             include_trends=not args.no_trends,
             include_competitors=args.competitors,
@@ -421,6 +534,9 @@ Ejemplos de uso:
 
         for format_type, filepath in reports.items():
             print(f"✅ {format_type.upper()}: {filepath}")
+
+        # Generate reliability report
+        generate_reliability_report(top_keywords, rejected)
 
         print(f"\n✨ Proceso completado. {len(keywords)} keywords procesadas y guardadas.")
 
