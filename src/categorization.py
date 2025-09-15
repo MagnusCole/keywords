@@ -91,6 +91,19 @@ class KeywordCategorizer:
 
         return "informational"
 
+    def intent_probability(self, keyword: str) -> float:
+        """Estimate probability that the intent is transactional/commercial.
+
+        Simple heuristic: transactional 0.85, commercial 0.6, informational 0.3,
+        with small boost if a specific service category is detected.
+        """
+        intent = self.categorize_intent(keyword)
+        base = {"transactional": 0.85, "commercial": 0.6, "informational": 0.3}.get(intent, 0.3)
+        service_type = self.categorize_service_type(keyword)
+        if service_type != "general":
+            base = min(1.0, base + 0.05)
+        return base
+
     def categorize_service_type(self, keyword: str) -> str:
         """
         Categoriza el tipo de servicio de una keyword
@@ -219,7 +232,8 @@ class KeywordCategorizer:
             priority = self.get_priority_score(keyword)
 
             # Agregar metadatos de categorización
-            kw_data["intent_category"] = self.categorize_intent(keyword)
+            kw_data["intent"] = self.categorize_intent(keyword)
+            kw_data["intent_prob"] = self.intent_probability(keyword)
             kw_data["service_category"] = self.categorize_service_type(keyword)
             kw_data["priority_score"] = priority
 

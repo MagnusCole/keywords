@@ -10,21 +10,16 @@ import logging
 import os
 import sys
 from datetime import datetime
-from pathlib import Path
-
-# Agregar src al path
-sys.path.append(str(Path(__file__).parent / "src"))
-
-from ads_volume import GoogleAdsVolumeProvider
-from categorization import KeywordCategorizer
-from clustering import SemanticClusterer
-from database import Keyword, KeywordDatabase
-from exporters import KeywordExporter
-from scoring import KeywordScorer
-from scrapers import CompetitorScraper, GoogleScraper
-from trends import TrendsAnalyzer
 
 from reliability_report import generate_reliability_report
+from src.ads_volume import GoogleAdsVolumeProvider
+from src.categorization import KeywordCategorizer
+from src.clustering import SemanticClusterer
+from src.database import Keyword, KeywordDatabase
+from src.exporters import KeywordExporter
+from src.scoring import KeywordScorer
+from src.scrapers import CompetitorScraper, GoogleScraper
+from src.trends import TrendsAnalyzer
 
 try:
     from dotenv import load_dotenv
@@ -121,6 +116,8 @@ class KeywordFinder:
             Tuple de (keywords rankeadas, clusters inteligentes, keywords rechazadas)
         """
         logging.info(f"Starting keyword discovery for seeds: {seed_keywords}")
+        # Correlation id for this execution to tag rows in DB/exports
+        run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
         all_keywords = []
 
@@ -263,8 +260,16 @@ class KeywordFinder:
                 competition=kw_data["competition"],
                 score=kw_data["score"],
                 category=kw_data.get("category", ""),
+                geo=self.config.get("geo", ""),
+                language=self.config.get("language", ""),
+                intent=kw_data.get("intent", ""),
                 cluster_id=kw_data.get("cluster_id"),
                 cluster_label=kw_data.get("cluster_label"),
+                run_id=run_id,
+                trend_weight=self.config.get("trend_weight", 0.4),
+                volume_weight=self.config.get("volume_weight", 0.4),
+                competition_weight=self.config.get("competition_weight", 0.2),
+                intent_prob=float(kw_data.get("intent_prob", 0.0) or 0.0),
             )
             keyword_objects.append(keyword_obj)
 
@@ -418,6 +423,13 @@ Ejemplos de uso:
         help="Mostrar keywords existentes en lugar de buscar nuevas",
     )
 
+    parser.add_argument(
+        "--filters",
+        type=str,
+        default="",
+        help='Filtros para --existing en formato k=v separados por coma (ej: "geo=PE,language=es,intent=transactional,score>=60,last_seen_after=2025-09-01T00:00:00")',
+    )
+
     args = parser.parse_args()
 
     # Crear instancia del keyword finder
@@ -451,7 +463,26 @@ Ejemplos de uso:
 
         # Mostrar keywords existentes
         if args.existing:
-            keywords = finder.get_existing_keywords({"limit": args.limit})
+            # Parse filters string
+            filters: dict[str, str] = {}
+            min_score = 0
+            if args.filters:
+                parts = [p.strip() for p in args.filters.split(",") if p.strip()]
+                for p in parts:
+                    if ">=" in p:
+                        key, value = p.split(">=", 1)
+                        if key.strip() == "score":
+                            try:
+                                min_score = float(value)
+                            except ValueError:
+                                pass
+                    elif "=" in p:
+                        key, value = p.split("=", 1)
+                        filters[key.strip()] = value.strip()
+
+            keywords = finder.db.get_keywords(
+                limit=args.limit, min_score=min_score, filters=filters
+            )
 
             if not keywords:
                 print("No hay keywords en la base de datos.")
@@ -506,6 +537,7 @@ Ejemplos de uso:
         )
 
         # Ejecutar búsqueda de keywords
+        start_ts = datetime.now()
         keywords, clusters, rejected = await finder.find_keywords(
             seed_keywords=all_seeds,
             include_trends=not args.no_trends,
@@ -537,6 +569,30 @@ Ejemplos de uso:
 
         # Generate reliability report
         generate_reliability_report(top_keywords, rejected)
+
+        # Persist run metrics
+        try:
+            from json import dumps
+
+            finder.db.insert_run(
+                run_id=f"run_{start_ts.strftime('%Y%m%d_%H%M%S')}",
+                metrics={
+                    "started_at": start_ts.isoformat(),
+                    "finished_at": datetime.now().isoformat(),
+                    "geo": args.geo,
+                    "language": args.language,
+                    "seeds_json": dumps(all_seeds, ensure_ascii=False),
+                    "seeds_count": len(all_seeds),
+                    "keywords_found": len(keywords),
+                    "rejected_count": len(rejected),
+                    "trend_weight": finder.config.get("trend_weight", 0.4),
+                    "volume_weight": finder.config.get("volume_weight", 0.4),
+                    "competition_weight": finder.config.get("competition_weight", 0.2),
+                    "duration_ms": int((datetime.now() - start_ts).total_seconds() * 1000),
+                },
+            )
+        except Exception as e:
+            logging.debug(f"Failed to persist run metrics: {e}")
 
         print(f"\n✨ Proceso completado. {len(keywords)} keywords procesadas y guardadas.")
 

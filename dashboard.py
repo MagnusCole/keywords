@@ -33,6 +33,14 @@ class KeywordDashboard:
             min_score = st.slider("Score mínimo", 0, 100, 0)
             max_competition = st.slider("Competencia máxima", 0.0, 1.0, 1.0)
 
+            # Extra filters
+            geo = st.text_input("Geo (ISO)", value="")
+            language = st.text_input("Idioma (ISO)", value="")
+            intent = st.selectbox(
+                "Intención", ["", "transactional", "commercial", "informational"], index=0
+            )
+            cluster_label = st.text_input("Etiqueta de cluster contiene", value="")
+
             # Límite de resultados
             limit = st.selectbox("Máximo resultados", [10, 20, 50, 100], index=1)
 
@@ -41,7 +49,9 @@ class KeywordDashboard:
                 st.cache_data.clear()
 
         # Obtener datos
-        keywords = self._get_filtered_keywords(min_score, max_competition, limit)
+        keywords = self._get_filtered_keywords(
+            min_score, max_competition, limit, geo, language, intent, cluster_label
+        )
 
         if not keywords:
             st.warning("No hay keywords que coincidan con los filtros.")
@@ -66,12 +76,26 @@ class KeywordDashboard:
         self._show_export_options(keywords)
 
     @st.cache_data
-    def _get_filtered_keywords(self, min_score, max_competition, limit):
+    def _get_filtered_keywords(
+        self, min_score, max_competition, limit, geo, language, intent, cluster_label
+    ):
         filters = {"min_score": min_score, "limit": limit}
+        if geo:
+            filters["filters"] = filters.get("filters", {}) | {"geo": geo}
+        if language:
+            filters["filters"] = filters.get("filters", {}) | {"language": language}
+        if intent:
+            filters["filters"] = filters.get("filters", {}) | {"intent": intent}
         keywords = self.db.get_keywords(**filters)
 
         # Filtrar por competencia
         filtered = [kw for kw in keywords if kw.get("competition", 1) <= max_competition]
+        # Filter by cluster label contains
+        if cluster_label:
+            cl = cluster_label.lower()
+            filtered = [
+                kw for kw in filtered if (kw.get("cluster_label") or "").lower().find(cl) != -1
+            ]
 
         return filtered
 
@@ -128,7 +152,7 @@ class KeywordDashboard:
 
         # Convertir a DataFrame
         df_data = []
-        for i, kw in enumerate(keywords[:50], 1):  # Limitar a 50 para rendimiento
+        for i, kw in enumerate(keywords[:200], 1):  # Limitar a 200 para rendimiento
             df_data.append(
                 {
                     "Rank": i,
@@ -137,6 +161,10 @@ class KeywordDashboard:
                     "Trend": f"{kw.get('trend_score', 0):.0f}",
                     "Volume": f"{kw.get('volume', 0):,}",
                     "Competition": f"{kw.get('competition', 0):.2f}",
+                    "Geo": kw.get("geo", ""),
+                    "Language": kw.get("language", ""),
+                    "Intent": kw.get("intent", ""),
+                    "Cluster": kw.get("cluster_label", ""),
                     "Source": kw.get("source", ""),
                 }
             )
@@ -163,6 +191,17 @@ class KeywordDashboard:
                 lambda col: [color_score(v) for v in col], subset=["Score"]
             )  # noqa: E501
         st.dataframe(styled_df, use_container_width=True)
+
+        # Drill-through: select a cluster to filter
+        st.markdown("\n")
+        clusters = sorted({r.get("Cluster", "") for _, r in df.iterrows() if r.get("Cluster")})
+        cluster_selected = None
+        if clusters:
+            cluster_selected = st.selectbox("🔎 Ver keywords del cluster", clusters)
+        if cluster_selected:
+            st.write(f"Mostrando keywords del cluster: {cluster_selected}")
+            df_cluster = df[df["Cluster"] == cluster_selected]
+            st.dataframe(df_cluster, use_container_width=True)
 
     def _show_export_options(self, keywords):
         st.subheader("📤 Exportar Resultados")

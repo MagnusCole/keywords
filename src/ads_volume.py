@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import time
 from pathlib import Path
 
 
@@ -18,7 +19,9 @@ class GoogleAdsVolumeProvider:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
         self.cache_file = self.cache_dir / "ads_volume.json"
-        self._cache: dict[str, int] = self._load_cache()
+        # cache schema: {"<kw>|<geo>|<lang>": {"v": int, "ts": epoch_seconds}}
+        self._cache: dict[str, dict] = self._load_cache()
+        self._ttl_days: int = int(os.getenv("ADS_CACHE_TTL_DAYS", "0") or 0)
 
         # Lazy import of google-ads
         self.googleads = None
@@ -38,10 +41,24 @@ class GoogleAdsVolumeProvider:
         self.customer_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")
         self.login_customer_id = os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID")
 
-    def _load_cache(self) -> dict[str, int]:
+    def _load_cache(self) -> dict:
         try:
             if self.cache_file.exists():
-                return json.loads(self.cache_file.read_text(encoding="utf-8"))
+                data = json.loads(self.cache_file.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    now = int(time.time())
+                    # migrate legacy int cache to new schema
+                    migrated: dict[str, dict] = {}
+                    for k, v in data.items():
+                        if isinstance(v, int):
+                            migrated[k] = {"v": int(v), "ts": now}
+                        elif isinstance(v, dict) and "v" in v:
+                            # ensure ts exists
+                            migrated[k] = {"v": int(v.get("v", 0)), "ts": int(v.get("ts", now))}
+                        else:
+                            # skip invalid
+                            continue
+                    return migrated
         except Exception as e:
             self.logger.warning(f"Failed to load Ads cache: {e}")
         return {}
@@ -53,6 +70,24 @@ class GoogleAdsVolumeProvider:
             )
         except Exception as e:
             self.logger.warning(f"Failed to save Ads cache: {e}")
+
+    def _get_cached(self, key: str) -> int | None:
+        item = self._cache.get(key)
+        if not item:
+            return None
+        if isinstance(item, int):
+            return int(item)
+        # TTL enforcement
+        if self._ttl_days > 0:
+            ttl_sec = self._ttl_days * 86400
+            if int(time.time()) - int(item.get("ts", 0)) > ttl_sec:
+                # expired
+                self._cache.pop(key, None)
+                return None
+        return int(item.get("v", 0) or 0)
+
+    def _set_cache(self, key: str, value: int) -> None:
+        self._cache[key] = {"v": int(value), "ts": int(time.time())}
 
     def _have_credentials(self) -> bool:
         return all(
@@ -110,10 +145,27 @@ class GoogleAdsVolumeProvider:
             self.logger.warning("Google Ads not configured; returning empty volume mapping")
             return {}
 
+        # Guard misconfigured customer_id (must be digits with dashes removed)
+        try:
+            cid = (self.customer_id or "").replace("-", "")
+            if not cid.isdigit() or len(cid) < 8:
+                self.logger.warning("Invalid GOOGLE_ADS_CUSTOMER_ID; skipping Ads volume")
+                return {}
+        except Exception:
+            return {}
+
         # Filter cached
-        to_query = [kw for kw in keywords if f"{kw}|{geo}|{language}" not in self._cache]
+        to_query = []
+        result: dict[str, int] = {}
+        for kw in keywords:
+            k = f"{kw}|{geo}|{language}"
+            cached = self._get_cached(k)
+            if cached is None:
+                to_query.append(kw)
+            else:
+                result[kw] = cached
         if not to_query:
-            return {kw: int(self._cache.get(f"{kw}|{geo}|{language}", 0)) for kw in keywords}
+            return result
 
         try:
             client = self._build_client()
@@ -132,7 +184,7 @@ class GoogleAdsVolumeProvider:
                 return {}
 
             # Batch in chunks to avoid overloading
-            batch_size = 700
+            batch_size = 500
             for i in range(0, len(to_query), batch_size):
                 batch = to_query[i : i + batch_size]
 
@@ -146,7 +198,19 @@ class GoogleAdsVolumeProvider:
                 )
                 request.keyword_seed.keywords.extend(batch)  # type: ignore
 
-                response = idea_svc.generate_keyword_ideas(request=request)
+                # simple retry with backoff
+                retries = 0
+                backoff = 1.0
+                while True:
+                    try:
+                        response = idea_svc.generate_keyword_ideas(request=request)
+                        break
+                    except Exception as e:
+                        retries += 1
+                        if retries > 3:
+                            raise e
+                        time.sleep(backoff)
+                        backoff *= 2
 
                 for idea in response:
                     text = idea.text
@@ -159,11 +223,17 @@ class GoogleAdsVolumeProvider:
                     key = f"{text}|{geo}|{language}"
                     # Cache only non-zero values
                     if avg > 0:
-                        self._cache[key] = avg
+                        self._set_cache(key, avg)
 
             # Save cache and build mapping
             self._save_cache()
-            return {kw: int(self._cache.get(f"{kw}|{geo}|{language}", 0)) for kw in keywords}
+            # Merge cached new results
+            for kw in to_query:
+                k = f"{kw}|{geo}|{language}"
+                v = self._get_cached(k)
+                if v:
+                    result[kw] = v
+            return result
 
         except Exception as e:
             self.logger.error(f"Google Ads volume fetch failed: {e}")

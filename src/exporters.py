@@ -53,7 +53,7 @@ class KeywordExporter:
                 "cluster_label",
                 "data_source",
                 "last_seen",
-                "category",
+                "priority_bucket",
             ]
 
             with open(filepath, "w", newline="", encoding="utf-8") as csvfile:
@@ -73,7 +73,7 @@ class KeywordExporter:
                         "cluster_label": keyword.get("cluster_label", ""),
                         "data_source": keyword.get("data_source", "heurístico"),
                         "last_seen": keyword.get("last_seen", ""),
-                        "category": self._categorize_keyword(keyword.get("score", 0)),
+                        "priority_bucket": self._categorize_keyword(keyword.get("score", 0)),
                     }
                     writer.writerow(row)
 
