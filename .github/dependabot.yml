@@ -1,0 +1,116 @@
+# Dependabot configuration for automated dependency updates
+# Documentation: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+
+updates:
+  # ================================================================================
+  # PYTHON DEPENDENCIES
+  # ================================================================================
+  
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Etc/UTC"
+    
+    # Dependency update strategy
+    open-pull-requests-limit: 5
+    
+    # Commit message configuration
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    
+    # Auto-merge configuration for patch updates
+    allow:
+      - dependency-type: "all"
+    
+    # Dependency grouping to reduce PR noise
+    groups:
+      # Core dependencies
+      core-dependencies:
+        patterns:
+          - "requests*"
+          - "aiohttp*"
+          - "pydantic*"
+          - "sqlalchemy*"
+        
+      # ML and data science packages  
+      ml-dependencies:
+        patterns:
+          - "numpy*"
+          - "pandas*"
+          - "scikit-learn*"
+          - "sentence-transformers*"
+          - "hdbscan*"
+        
+      # Development tools
+      dev-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "pytest*"
+          - "black*"
+          - "ruff*"
+          - "mypy*"
+          - "coverage*"
+    
+    # Ignore specific updates
+    ignore:
+      # Ignore major version updates for stable packages
+      - dependency-name: "pandas"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "numpy"  
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "scikit-learn"
+        update-types: ["version-update:semver-major"]
+    
+    # Labels for organization
+    labels:
+      - "dependencies"
+      - "python"
+      - "automated"
+
+  # ================================================================================
+  # GITHUB ACTIONS
+  # ================================================================================
+  
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Etc/UTC"
+    
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    
+    labels:
+      - "github-actions"
+      - "ci/cd"
+      - "automated"
+
+  # ================================================================================
+  # DOCKER (if applicable)
+  # ================================================================================
+  
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Etc/UTC"
+    
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    
+    labels:
+      - "docker"
+      - "infrastructure"
+      - "automated"

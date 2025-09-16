@@ -1,0 +1,171 @@
+name: Security & Maintenance
+
+on:
+  schedule:
+    # Run security scans daily at 3 AM UTC
+    - cron: '0 3 * * *'
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  security-events: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ================================================================================
+  # CODEQL ANALYSIS (GitHub's Semantic Code Analysis)
+  # ================================================================================
+  
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'python' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-extended,security-and-quality
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v2
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
+
+  # ================================================================================
+  # DEPENDENCY VULNERABILITY SCANNING
+  # ================================================================================
+  
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v3
+      with:
+        fail-on-severity: critical
+        allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+
+  # ================================================================================
+  # SUPPLY CHAIN SECURITY
+  # ================================================================================
+  
+  supply-chain-security:
+    name: Supply Chain Security
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install cyclonedx-bom
+      run: pip install cyclonedx-bom
+      
+    - name: Generate SBOM (Software Bill of Materials)
+      run: |
+        cyclonedx-py -r -o sbom.json .
+        
+    - name: Upload SBOM
+      uses: actions/upload-artifact@v3
+      with:
+        name: software-bill-of-materials
+        path: sbom.json
+
+  # ================================================================================
+  # LICENSE COMPLIANCE
+  # ================================================================================
+  
+  license-compliance:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install pip-licenses
+      run: pip install pip-licenses
+      
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+      
+    - name: Check licenses
+      run: |
+        pip-licenses --format=json --output-file=licenses.json
+        pip-licenses --format=plain-vertical
+        
+    - name: Validate allowed licenses
+      run: |
+        python -c "
+        import json
+        
+        # Load license data
+        with open('licenses.json', 'r') as f:
+            licenses = json.load(f)
+        
+        # Allowed licenses for production use
+        allowed_licenses = {
+            'MIT License', 'MIT', 
+            'Apache Software License', 'Apache License 2.0', 'Apache 2.0',
+            'BSD License', 'BSD', 'BSD-2-Clause', 'BSD-3-Clause',
+            'ISC License', 'ISC',
+            'Python Software Foundation License',
+            'Mozilla Public License 2.0 (MPL 2.0)',
+            'UNKNOWN'  # Some packages don't declare license properly
+        }
+        
+        # Check for problematic licenses
+        problematic = []
+        for package in licenses:
+            license_name = package.get('License', 'UNKNOWN')
+            if license_name not in allowed_licenses:
+                problematic.append(f\"{package['Name']}: {license_name}\")
+        
+        if problematic:
+            print('❌ Problematic licenses found:')
+            for item in problematic:
+                print(f'  - {item}')
+            exit(1)
+        else:
+            print('✅ All licenses are compatible with production use')
+        "
+        
+    - name: Upload license report
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-report
+        path: licenses.json
