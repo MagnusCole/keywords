@@ -499,7 +499,11 @@ class GoogleScraper:
         return True
 
     async def expand_keywords(
-        self, seed_keywords: list[str], max_concurrent: int = 3
+        self,
+        seed_keywords: list[str],
+        max_concurrent: int = 3,
+        include_alphabet_soup: bool = False,
+        soup_chars: str | None = None,
     ) -> dict[str, list[str]]:
         """Expande una lista de keywords semilla usando autocomplete y related searches con paralelismo optimizado"""
         results = {}
@@ -528,6 +532,13 @@ class GoogleScraper:
                     f"{seed} gratis",  # ⚠️ Mantener pero con menor prioridad
                 }
             )
+
+            # Alphabet soup (opcional): agrega sufijos "a-z" y "0-9" para ampliar sugerencias
+            if include_alphabet_soup:
+                chars = soup_chars or "abcdefghijklmnopqrstuvwxyz0123456789"
+                addl = [f"{seed} {ch}" for ch in chars]
+                # Limitar para evitar explosión
+                variations.extend(addl[: max(0, 36)])
 
             # Crear tasks para autocomplete suggestions (parallelized)
             autocomplete_tasks = [
