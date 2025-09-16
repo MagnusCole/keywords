@@ -95,7 +95,7 @@ jobs:
         cyclonedx-py -r -o sbom.json .
         
     - name: Upload SBOM
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: software-bill-of-materials
         path: sbom.json
@@ -165,7 +165,7 @@ jobs:
         "
         
     - name: Upload license report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: license-report
         path: licenses.json
