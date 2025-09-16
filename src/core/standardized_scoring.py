@@ -1,5 +1,5 @@
 """
-Scoring estandarizado v1 para keyword finder.
+Scoring estandarizado v1.0.0 para keyword finder.
 
 Implementa la fórmula congelada según PR-04:
 score = norm(relevance)*0.45 + norm(volume)*0.35 + (1-norm(competition))*0.10 + norm(trend)*0.10
@@ -13,25 +13,32 @@ import statistics
 from dataclasses import asdict, dataclass
 from typing import Any
 
+from ..ml.pipeline_config import FrozenScoringFormula, PRODUCTION_SCORING_FORMULA
+
 from ..platform.exceptions_enterprise import ScoringError, ValidationError
+from ..ml.pipeline_config import PRODUCTION_SCORING_FORMULA, FrozenScoringFormula
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class ScoringConfig:
-    """Configuración del scoring estandarizado v1."""
+    """Configuración del scoring estandarizado v1 - DEPRECATED.
+    
+    Use FrozenScoringFormula from pipeline_config instead.
+    This is kept for backward compatibility only.
+    """
 
     # Pesos de la fórmula congelada (suman 1.0)
-    relevance_weight: float = 0.45
-    volume_weight: float = 0.35
-    competition_weight: float = 0.10
-    trend_weight: float = 0.10
+    relevance_weight: float = PRODUCTION_SCORING_FORMULA.RELEVANCE_WEIGHT
+    volume_weight: float = PRODUCTION_SCORING_FORMULA.VOLUME_WEIGHT
+    competition_weight: float = PRODUCTION_SCORING_FORMULA.COMPETITION_WEIGHT
+    trend_weight: float = PRODUCTION_SCORING_FORMULA.TREND_WEIGHT
 
     # Intent classifier settings
     intent_enabled: bool = False
-    intent_base_multiplier: float = 0.9  # Base multiplier
-    intent_boost_factor: float = 0.2  # Additional boost for transactional
+    intent_base_multiplier: float = PRODUCTION_SCORING_FORMULA.INTENT_BASE_MULTIPLIER
+    intent_boost_factor: float = PRODUCTION_SCORING_FORMULA.INTENT_TRANSACTIONAL_BOOST
 
     # Validation
     def __post_init__(self):
@@ -41,6 +48,8 @@ class ScoringConfig:
         )
         if abs(total - 1.0) > 0.001:
             raise ValidationError(f"Scoring weights must sum to 1.0, got {total:.3f}")
+        
+        logger.warning("ScoringConfig is deprecated. Use FrozenScoringFormula from pipeline_config instead.")
 
 
 @dataclass
@@ -74,10 +83,11 @@ class ScoringMetadata:
     intent_reranked: int = 0
     run_id: str = ""
     version: str = "v1.0.0"
+    frozen_formula: FrozenScoringFormula | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dict for JSON serialization."""
-        return {
+        result = {
             "config": asdict(self.config),
             "market_norms": asdict(self.market_norms),
             "keywords_processed": self.keywords_processed,
@@ -85,6 +95,9 @@ class ScoringMetadata:
             "run_id": self.run_id,
             "version": self.version,
         }
+        if self.frozen_formula:
+            result["frozen_formula"] = asdict(self.frozen_formula)
+        return result
 
 
 class StandardizedScorer:
@@ -98,15 +111,18 @@ class StandardizedScorer:
     - Trazabilidad completa
     """
 
-    def __init__(self, config: ScoringConfig, run_id: str = ""):
+    def __init__(self, config: ScoringConfig | None = None, run_id: str = "", frozen_formula: FrozenScoringFormula | None = None):
         """
-        Initialize standardized scorer.
+        Initialize standardized scorer with frozen formula.
 
         Args:
-            config: Scoring configuration
+            config: Legacy scoring configuration (deprecated)
             run_id: Run identifier for traceability
+            frozen_formula: Production frozen formula (recommended)
         """
-        self.config = config
+        # Use frozen formula by default, fallback to legacy config
+        self.frozen_formula = frozen_formula or PRODUCTION_SCORING_FORMULA
+        self.config = config or ScoringConfig()  # Legacy compatibility
         self.run_id = run_id
 
         # Intent patterns for relevance scoring
@@ -275,11 +291,11 @@ class StandardizedScorer:
 
         # Apply standardized formula (v1.0.0 frozen)
         score = (
-            relevance_norm * self.config.relevance_weight
-            + volume_norm * self.config.volume_weight
+            relevance_norm * self.frozen_formula.RELEVANCE_WEIGHT
+            + volume_norm * self.frozen_formula.VOLUME_WEIGHT
             + (1.0 - competition_norm)
-            * self.config.competition_weight  # Invert competition (lower is better)
-            + trend_norm * self.config.trend_weight
+            * self.frozen_formula.COMPETITION_WEIGHT  # Invert competition (lower is better)
+            + trend_norm * self.frozen_formula.TREND_WEIGHT
         )
 
         # Convert to 0-100 scale
@@ -392,11 +408,12 @@ class StandardizedScorer:
 
             # 5. Create metadata
             metadata = ScoringMetadata(
-                config=self.config,
+                config=self.config,  # Legacy compatibility
                 market_norms=market_norms,
                 keywords_processed=len(keywords),
                 intent_reranked=reranked_count,
                 run_id=self.run_id,
+                frozen_formula=self.frozen_formula,  # Track frozen formula used
             )
 
             score_stats = [kw.get("score", 0) for kw in final_keywords]

@@ -1,56 +1,36 @@
 # =============================================================================
 # KEYWORD FINDER - CONFIGURACIÓN UNIFICADA
 # =============================================================================
-# Sistema de perfiles: development (default), validation, production
-# Uso: keyword-finder --config config.yaml --profile production
-# Overrides: keyword-finder --override ml.clustering.algo=kmeans
+# Configuración estándar según especificaciones PR-01
+# Un solo origen de verdad: config.yaml → nada hardcodeado
 
-# =============================================================================
-# CONFIGURACIÓN BASE (development profile)
-# =============================================================================
 project:
   name: "keyword-intel"
   version: "1.0.0"
-  environment: "development"
 
 run:
   geo: "PE"
   language: "es"
-  seeds: ["marketing", "ventas", "negocios"]
+  seeds: ["limpieza de piscina", "mantenimiento piscina"]
   target:
-    raw: 0         # 0 = sin objetivo
-    filtered: 0    # 0 = sin objetivo
-    clusters: 0    # 0 = sin objetivo
+    raw: 2000
+    filtered: 400
+    clusters: 30
 
 expansion:
   limit_per_seed: 200
-  alphabet_soup: false
+  alphabet_soup: true
   modifiers: ["mejor", "precio", "curso", "2025", "lima", "peru"]
 
 sources:
   trends: true
   ads_volume: false
-  data_source_priority: ["ads_volume", "trends", "heuristic"]
-
-# Request configuration
-requests:
-  delay_min: 1.0
-  delay_max: 3.0
-  max_retries: 3
-  timeout: 10
-  concurrent_limit: 2
-
-# Google Ads API limits
-google_ads:
-  daily_operations_limit: 15000
-  daily_get_requests_limit: 1000
-  batch_size: 20
-  cache_ttl: 3600
+  data_source_priority: ["ads", "trends", "heuristic"]
 
 filters:
-  min_score: 0.0
-  max_competition: 1.0
-  intent_whitelist: ["informational", "transactional"]
+  min_score: 45
+  max_competition: 0.7
+  intent_whitelist: ["transactional", "informational"]
 
 scoring:
   weights:
@@ -58,138 +38,25 @@ scoring:
     volume: 0.35
     competition: 0.10
     trend: 0.10
-  intent_reranking: false
 
 ml:
   embeddings:
     enabled: true
     model_name: "sentence-transformers/all-MiniLM-L6-v2"
   clustering:
-    algo: "auto"     # auto|hdbscan|kmeans
+    algo: "hdbscan"
     min_cluster_size: "auto"
     min_samples: "auto"
   intent_classifier:
     enabled: false
     model: "logreg_tfidf_v1"
 
-# Database and I/O
 io:
-  db_path: "keywords.db"
+  db_path: "data/keywords.db"
   exports_dir: "exports"
   cache_dir: "cache"
-  logs_dir: "logs"
 
-# Logging configuration
 logging:
   level: "INFO"
-  format: "enterprise"      # enterprise|json|text
-  file_enabled: true
-  console_enabled: true
-  rotation: "size"          # size|time|none
-  max_file_size: "10MB"     # Para rotation=size
-  max_files: 5              # Archivos de backup
-  console_ascii_safe: true  # ASCII-safe para Windows
-  
-  # Configuración enterprise adicional
-  service_name: "keyword-intel"
-  include_location: true     # Incluir file/line/function
-  include_execution: true    # Incluir thread/process info
-  include_timing: true       # Incluir timing info
-
-# =============================================================================
-# PROFILES - CONFIGURACIONES ESPECÍFICAS POR ENTORNO
-# =============================================================================
-
-profiles:
-  
-  # VALIDATION PROFILE - Mínimos requests para testing
-  validation:
-    project:
-      environment: "validation"
-    run:
-      seeds: ["marketing digital"]  # Solo 1 seed
-    expansion:
-      limit_per_seed: 25    # Reducido para validación
-      alphabet_soup: false
-      modifiers: ["lima", "peru"]
-    sources:
-      trends: false         # DESACTIVADO
-      ads_volume: false     # DESACTIVADO  
-      data_source_priority: ["heuristic"]
-    requests:
-      delay_min: 2.0
-      delay_max: 4.0
-      max_retries: 2
-      concurrent_limit: 1   # Solo 1 request concurrente
-    ml:
-      clustering:
-        algo: "kmeans"      # Más rápido que HDBSCAN
-    logging:
-      level: "DEBUG"
-      format: "json"         # Más simple para debugging
-      rotation: "none"       # Sin rotación para validation
-      console_enabled: true
-      file_enabled: false    # Solo consola para validation
-  
-  # PRODUCTION PROFILE - Configuración optimizada para prod
-  production:
-    project:
-      environment: "production"
-    run:
-      seeds: ["marketing digital", "diseño web", "seo"]
-      target:
-        raw: 150       # Objetivo realista
-        filtered: 100  
-        clusters: 10   
-    expansion:
-      limit_per_seed: 50    # 50 x 3 seeds = 150 keywords
-      alphabet_soup: true   # Mejor cobertura
-      modifiers: ["lima", "peru", "perú", "online", "digital"]
-    sources:
-      trends: true          # ACTIVADO
-      ads_volume: true      # ACTIVADO
-      data_source_priority: ["ads_volume", "trends", "heuristic"]
-    requests:
-      delay_min: 3.0        # Conservador para APIs
-      delay_max: 6.0
-      concurrent_limit: 1   # Máxima seguridad
-    filters:
-      min_score: 0.1        # Más estricto
-      max_competition: 0.8  # Evitar ultra competitivas
-      intent_whitelist: ["informational", "transactional", "navigational"]
-    scoring:
-      intent_reranking: true  # Mejor precisión
-    logging:
-      level: "INFO"
-      file_enabled: true
-      format: "enterprise"   # Formato completo para producción
-      rotation: "time"       # Rotación diaria
-      max_files: 30          # 30 días de logs
-      console_enabled: false # Solo archivos en prod
-  
-  # TEST PROFILE - Para testing automatizado
-  test:
-    project:
-      environment: "test"
-    run:
-      seeds: ["test"]
-    expansion:
-      limit_per_seed: 5
-      alphabet_soup: false
-      modifiers: ["test"]
-    sources:
-      trends: false
-      ads_volume: false
-      data_source_priority: ["heuristic"]
-    requests:
-      delay_min: 0.1
-      delay_max: 0.2
-      concurrent_limit: 1
-    io:
-      db_path: ":memory:"  # In-memory database
-    logging:
-      level: "WARNING"
-      console_enabled: false
-      format: "text"         # Formato simple para tests
-      file_enabled: false    # Sin archivos en tests
-      rotation: "none"
+  json: true
+  filepath: "logs/run_{run_id}.jsonl"

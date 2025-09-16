@@ -4,26 +4,84 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .export_standards import StandardizedExporter, PRODUCTION_EXPORT_STANDARD
+
+logger = logging.getLogger(__name__)
+
 
 class KeywordExporter:
+    """
+    Legacy keyword exporter with PR-05 standardization integration.
+    
+    This class maintains backward compatibility while using the new
+    StandardizedExporter for consistent export formats.
+    """
+    
     def __init__(self, export_dir: str = "exports"):
         self.export_dir = Path(export_dir)
         self.export_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Use standardized exporter for new exports
+        self.standardized_exporter = StandardizedExporter(
+            export_dir=self.export_dir,
+            standard=PRODUCTION_EXPORT_STANDARD
+        )
 
     def export_to_csv(
         self,
         keywords: list[dict[str, Any]],
         filename: str | None = None,
         scoring_metadata: dict[str, Any] | None = None,
+        run_id: str = "",
+        geo: str = "",
+        language: str = "",
+        transparency_mode: bool = True
     ):
         """
-        Export keywords to CSV with standardized format and optional scoring metadata.
-
+        Export keywords to standardized CSV format.
+        
         Args:
             keywords: List of keyword dictionaries
             filename: Optional filename, will auto-generate if None
             scoring_metadata: Optional scoring metadata for transparency
+            run_id: Run identifier for tracking
+            geo: Geographic market
+            language: Language code
+            transparency_mode: Include scoring transparency columns
+            
+        Returns:
+            str: Path to exported file
         """
+        try:
+            # Use standardized exporter for consistent format
+            filepath, export_metadata = self.standardized_exporter.export_keywords_csv(
+                keywords=keywords,
+                run_id=run_id,
+                geo=geo,
+                language=language,
+                transparency_mode=transparency_mode,
+                filename=filename
+            )
+            
+            logger.info(
+                f"Standardized CSV export complete: {export_metadata.record_count} keywords "
+                f"exported to {filepath} (v{export_metadata.export_version})"
+            )
+            
+            return filepath
+            
+        except Exception as e:
+            logger.error(f"CSV export failed: {e}")
+            # Fallback to legacy export for backward compatibility
+            return self._legacy_export_to_csv(keywords, filename, scoring_metadata)
+    
+    def _legacy_export_to_csv(
+        self,
+        keywords: list[dict[str, Any]],
+        filename: str | None = None,
+        scoring_metadata: dict[str, Any] | None = None,
+    ):
+        """Legacy CSV export method for backward compatibility."""
         if not filename:
             filename = f"keyword_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
@@ -162,9 +220,41 @@ class KeywordExporter:
             return ""
 
     def export_cluster_report(
-        self, clusters: dict[str, list[dict[str, Any]]], filename: str | None = None
+        self, 
+        clusters: dict[str, list[dict[str, Any]]], 
+        filename: str | None = None,
+        run_id: str = "",
+        geo: str = "",
+        language: str = ""
     ):
         """Export detailed cluster report with standardized format."""
+        try:
+            # Use standardized cluster export
+            filepath, export_metadata = self.standardized_exporter.export_cluster_summary(
+                clusters=clusters,
+                run_id=run_id,
+                geo=geo,
+                language=language,
+                filename=filename
+            )
+            
+            logger.info(
+                f"Standardized cluster report complete: {export_metadata.record_count} clusters "
+                f"exported to {filepath} (v{export_metadata.export_version})"
+            )
+            
+            return filepath
+            
+        except Exception as e:
+            logger.error(f"Cluster export failed: {e}")
+            return self._legacy_export_cluster_report(clusters, filename)
+    
+    def _legacy_export_cluster_report(
+        self, 
+        clusters: dict[str, list[dict[str, Any]]], 
+        filename: str | None = None
+    ):
+        """Legacy cluster export for backward compatibility."""
         if not filename:
             filename = f"cluster_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         filepath = self.export_dir / filename

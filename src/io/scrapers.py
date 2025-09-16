@@ -134,7 +134,7 @@ class GoogleScraper:
         return headers
 
     async def _make_request(self, url: str) -> str:
-        """Hace una request HTTP con reintentos y rate limiting avanzado"""
+        """Hace una request HTTP con reintentos, rate limiting y manejo de cancelaciones"""
         for attempt in range(self.max_retries):
             try:
                 if self.rate_limiter:
@@ -169,6 +169,10 @@ class GoogleScraper:
 
                 logging.debug(f"Request successful to {url}")
                 return text
+
+            except asyncio.CancelledError:
+                logging.info(f"Request cancelled for {url}")
+                raise  # Re-raise CancelledError to propagate cancellation
 
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 429:  # Rate limited
@@ -584,18 +588,26 @@ class GoogleScraper:
             # Task para related searches
             related_task = self._get_related_with_semaphore(seed, request_semaphore)
 
-            # Ejecutar todas las tasks en paralelo
+            # Ejecutar todas las tasks en paralelo con timeout general
             try:
-                # Gather all autocomplete results
-                autocomplete_results = await asyncio.gather(
-                    *autocomplete_tasks, return_exceptions=True
-                )
+                # Use asyncio.wait_for with overall timeout for the entire operation
+                async def gather_all_results():
+                    # Gather all autocomplete results
+                    autocomplete_results = await asyncio.gather(
+                        *autocomplete_tasks, return_exceptions=True
+                    )
 
-                # Gather YouTube results
-                youtube_results = await asyncio.gather(*youtube_tasks, return_exceptions=True)
+                    # Gather YouTube results
+                    youtube_results = await asyncio.gather(*youtube_tasks, return_exceptions=True)
 
-                # Get related searches
-                related_results = await related_task
+                    # Get related searches
+                    related_results = await related_task
+
+                    return autocomplete_results, youtube_results, related_results
+
+                # Set overall timeout for all operations
+                results_tuple = await asyncio.wait_for(gather_all_results(), timeout=60.0)
+                autocomplete_results, youtube_results, related_results = results_tuple
 
                 # Flatten and combine results
                 all_keywords = []
@@ -604,19 +616,21 @@ class GoogleScraper:
                 for result in autocomplete_results:
                     if isinstance(result, list):
                         all_keywords.extend(result)
-                    elif isinstance(result, Exception):
-                        logging.warning(f"Autocomplete task failed: {result}")
+                    elif isinstance(result, (Exception, asyncio.CancelledError)):
+                        logging.debug(f"Autocomplete task result: {type(result).__name__}")
 
                 # Process YouTube results
                 for result in youtube_results:
                     if isinstance(result, list):
                         all_keywords.extend(result)
-                    elif isinstance(result, Exception):
-                        logging.warning(f"YouTube task failed: {result}")
+                    elif isinstance(result, (Exception, asyncio.CancelledError)):
+                        logging.debug(f"YouTube task result: {type(result).__name__}")
 
                 # Add related searches
                 if isinstance(related_results, list):
                     all_keywords.extend(related_results)
+                elif isinstance(related_results, (Exception, asyncio.CancelledError)):
+                    logging.debug(f"Related search result: {type(related_results).__name__}")
 
                 # Remove duplicates and store
                 unique_keywords = list(set(all_keywords))
@@ -626,6 +640,16 @@ class GoogleScraper:
                     f"Expanded '{seed}' into {len(unique_keywords)} keywords using parallel processing"
                 )
 
+            except TimeoutError:
+                logging.warning(
+                    f"Timeout during parallel expansion for '{seed}', falling back to sequential"
+                )
+                results[seed] = await self._expand_keywords_sequential(seed, variations)
+            except asyncio.CancelledError:
+                logging.info(
+                    f"Parallel expansion cancelled for '{seed}', falling back to sequential"
+                )
+                results[seed] = await self._expand_keywords_sequential(seed, variations)
             except Exception as e:
                 logging.error(f"Error in parallel expansion for '{seed}': {e}")
                 # Fallback to sequential processing
@@ -637,34 +661,54 @@ class GoogleScraper:
         self, variation: str, semaphore: asyncio.Semaphore
     ) -> list[str]:
         """Get autocomplete suggestions with semaphore rate limiting"""
-        async with semaphore:
-            try:
-                return await self.get_autocomplete_suggestions(variation)
-            except Exception as e:
-                logging.warning(f"Failed to get autocomplete for '{variation}': {e}")
-                return []
+        try:
+            async with semaphore:
+                return await asyncio.wait_for(
+                    self.get_autocomplete_suggestions(variation), timeout=15.0
+                )
+        except TimeoutError:
+            logging.warning(f"Timeout getting autocomplete for '{variation}'")
+            return []
+        except asyncio.CancelledError:
+            logging.info(f"Autocomplete task cancelled for '{variation}'")
+            return []
+        except Exception as e:
+            logging.warning(f"Failed to get autocomplete for '{variation}': {e}")
+            return []
 
     async def _get_youtube_with_semaphore(
         self, variation: str, semaphore: asyncio.Semaphore
     ) -> list[str]:
         """Get YouTube suggestions with semaphore rate limiting"""
-        async with semaphore:
-            try:
-                return await self.get_youtube_suggestions(variation)
-            except Exception as e:
-                logging.warning(f"Failed to get YouTube suggestions for '{variation}': {e}")
-                return []
+        try:
+            async with semaphore:
+                return await asyncio.wait_for(self.get_youtube_suggestions(variation), timeout=15.0)
+        except TimeoutError:
+            logging.warning(f"Timeout getting YouTube suggestions for '{variation}'")
+            return []
+        except asyncio.CancelledError:
+            logging.info(f"YouTube task cancelled for '{variation}'")
+            return []
+        except Exception as e:
+            logging.warning(f"Failed to get YouTube suggestions for '{variation}': {e}")
+            return []
 
     async def _get_related_with_semaphore(
         self, seed: str, semaphore: asyncio.Semaphore
     ) -> list[str]:
         """Get related searches with semaphore rate limiting"""
-        async with semaphore:
-            try:
-                return await self.get_related_searches(seed)
-            except Exception as e:
-                logging.warning(f"Failed to get related searches for '{seed}': {e}")
-                return []
+        try:
+            async with semaphore:
+                return await asyncio.wait_for(self.get_related_searches(seed), timeout=15.0)
+        except TimeoutError:
+            logging.warning(f"Timeout getting related searches for '{seed}'")
+            return []
+        except asyncio.CancelledError:
+            logging.info(f"Related search task cancelled for '{seed}'")
+            return []
+        except Exception as e:
+            logging.warning(f"Failed to get related searches for '{seed}': {e}")
+            return []
 
     async def _expand_keywords_sequential(self, seed: str, variations: list[str]) -> list[str]:
         """Fallback sequential expansion when parallel fails"""
