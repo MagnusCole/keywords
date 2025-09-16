@@ -1,0 +1,213 @@
+﻿import csv
+import logging
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+
+class KeywordExporter:
+    def __init__(self, export_dir: str = "exports"):
+        self.export_dir = Path(export_dir)
+        self.export_dir.mkdir(parents=True, exist_ok=True)
+
+    def export_to_csv(
+        self,
+        keywords: list[dict[str, Any]],
+        filename: str | None = None,
+        scoring_metadata: dict[str, Any] | None = None,
+    ):
+        """
+        Export keywords to CSV with standardized format and optional scoring metadata.
+
+        Args:
+            keywords: List of keyword dictionaries
+            filename: Optional filename, will auto-generate if None
+            scoring_metadata: Optional scoring metadata for transparency
+        """
+        if not filename:
+            filename = f"keyword_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+        filepath = self.export_dir / filename
+
+        try:
+            with open(filepath, "w", newline="", encoding="utf-8") as f:
+                # PR-04: Standardized column order and names
+                fieldnames = [
+                    "keyword",
+                    "score",
+                    "volume",
+                    "competition",
+                    "trend",
+                    "intent",
+                    "intent_prob",
+                    "geo",
+                    "language",
+                    "source",
+                    "data_source",
+                    "cluster_id",
+                    "run_id",
+                    "updated_at",
+                ]
+
+                # Add scoring transparency fields if available
+                if scoring_metadata:
+                    fieldnames.extend(
+                        [
+                            "relevance_raw",
+                            "relevance_norm",
+                            "volume_norm",
+                            "competition_norm",
+                            "trend_norm",
+                            "scoring_version",
+                        ]
+                    )
+
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+
+                # Write header with scoring metadata comment
+                if scoring_metadata:
+                    # Write JSON metadata as comment lines
+                    import json
+
+                    export_metadata = {
+                        "scoring_metadata": scoring_metadata,
+                        "export_timestamp": datetime.now().isoformat(),
+                        "export_format": "CSV",
+                        "standardized_scoring": "v1.0.0",
+                    }
+                    f.write(
+                        f"# Scoring Metadata: {json.dumps(export_metadata, separators=(',', ':'))}\n"
+                    )
+                    f.write(f"# Generated: {datetime.now().isoformat()}\n")
+                    f.write("# Standard: PR-04 Standardized Export Format v1.0.0\n")
+
+                writer.writeheader()
+
+                for kw in keywords:
+                    # Ensure all required fields exist with defaults
+                    row = {
+                        "keyword": kw.get("keyword", ""),
+                        "score": kw.get("score", 0),
+                        "volume": kw.get("volume", 0),
+                        "competition": kw.get("competition", 0),
+                        "trend": kw.get("trend_score", 0),
+                        "intent": kw.get("intent", "informational"),
+                        "intent_prob": kw.get("intent_prob_transactional", 0.0),
+                        "geo": kw.get("geo", ""),
+                        "language": kw.get("language", ""),
+                        "source": kw.get("source", "autocomplete"),
+                        "data_source": kw.get("data_source", "heuristic"),
+                        "cluster_id": kw.get("cluster_id", ""),
+                        "run_id": kw.get("run_id", ""),
+                        "updated_at": kw.get("updated_at", datetime.now().isoformat()),
+                    }
+
+                    # Add transparency fields if available
+                    if scoring_metadata:
+                        row.update(
+                            {
+                                "relevance_raw": kw.get("relevance_raw", ""),
+                                "relevance_norm": kw.get("relevance_norm", ""),
+                                "volume_norm": kw.get("volume_norm", ""),
+                                "competition_norm": kw.get("competition_norm", ""),
+                                "trend_norm": kw.get("trend_norm", ""),
+                                "scoring_version": kw.get("scoring_version", ""),
+                            }
+                        )
+
+                    writer.writerow(row)
+
+            logging.info(f"CSV report with {len(keywords)} keywords exported to {filepath}")
+            return str(filepath)
+
+        except Exception as e:
+            logging.error(f"Error exporting CSV: {e}")
+            return ""
+
+    def export_to_pdf(
+        self, keywords: list[dict[str, Any]], filename: str | None = None, title: str = "Report"
+    ):
+        """Export keywords to PDF (placeholder implementation)."""
+        if not filename:
+            filename = f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        filepath = self.export_dir / filename
+        try:
+            content = f"Report: {title}\nKeywords: {len(keywords)}"
+            filepath.write_text(content, encoding="utf-8")
+            return str(filepath)
+        except Exception as e:
+            logging.error(f"Error exporting PDF: {e}")
+            return ""
+
+    def export_briefs(
+        self,
+        clusters: dict[str, list[dict[str, Any]]],
+        dirname: str | None = None,
+        geo: str | None = None,
+    ):
+        """Export cluster-based SEO briefs."""
+        if not dirname:
+            dirname = f"briefs_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        briefs_dir = self.export_dir / dirname
+        briefs_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            for cluster_key, items in clusters.items():
+                if items:
+                    content = f"# {cluster_key}\n\nKeywords: {len(items)}\n"
+                    (briefs_dir / f"{cluster_key}.md").write_text(content, encoding="utf-8")
+            return str(briefs_dir)
+        except Exception as e:
+            logging.error(f"Error exporting briefs: {e}")
+            return ""
+
+    def export_cluster_report(
+        self, clusters: dict[str, list[dict[str, Any]]], filename: str | None = None
+    ):
+        """Export detailed cluster report with standardized format."""
+        if not filename:
+            filename = f"cluster_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        filepath = self.export_dir / filename
+
+        try:
+            with open(filepath, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=["cluster_id", "keyword", "score"])
+                writer.writeheader()
+                for cluster_id, items in clusters.items():
+                    for item in items:
+                        writer.writerow(
+                            {
+                                "cluster_id": cluster_id,
+                                "keyword": item.get("keyword", ""),
+                                "score": item.get("score", 0),
+                            }
+                        )
+            return str(filepath)
+        except Exception as e:
+            logging.error(f"Error exporting cluster report: {e}")
+            return ""
+
+    def export_clusters_summary(
+        self, clusters: dict[str, list[dict[str, Any]]], filename: str | None = None
+    ):
+        """Export cluster summary with statistics."""
+        if not filename:
+            filename = f"clusters_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        filepath = self.export_dir / filename
+
+        try:
+            with open(filepath, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=["cluster_id", "size", "avg_score"])
+                writer.writeheader()
+                for cluster_id, items in clusters.items():
+                    size = len(items)
+                    avg_score = (
+                        sum(float(item.get("score", 0)) for item in items) / size if size else 0
+                    )
+                    writer.writerow(
+                        {"cluster_id": cluster_id, "size": size, "avg_score": round(avg_score, 2)}
+                    )
+            return str(filepath)
+        except Exception as e:
+            logging.error(f"Error exporting clusters summary: {e}")
+            return ""

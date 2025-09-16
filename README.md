@@ -81,8 +81,9 @@ python main.py --existing --limit 20
 # Estadísticas de la base de datos
 python main.py --stats
 
-# Análisis de confiabilidad
-python reliability_analysis.py
+# Análisis de confiabilidad - obsoleto, usar tests
+# python reliability_analysis.py
+pytest tests/
 ```
 
 ## 🎛️ Configuración Completa
@@ -248,7 +249,7 @@ python main.py --ads-volume on --geo MX --language es
 ```
 keyword-finder/
 ├── main.py                    # CLI principal con nuevas flags
-├── reliability_analysis.py    # Análisis de confiabilidad del sistema
+├── tests/                     # Suite de tests y análisis de confiabilidad
 ├── .env.example              # Template para credenciales Google Ads
 ├── src/
 │   ├── scrapers.py           # Multi-país scraping con HTTP/2 + async
@@ -321,8 +322,9 @@ python test_improvements.py
 # Test sistema scoring avanzado  
 python test_advanced_scoring.py
 
-# Análisis de confiabilidad completo
-python reliability_analysis.py
+# Análisis de confiabilidad completo - usar tests
+# python reliability_analysis.py
+pytest tests/
 
 # Lint y format
 ruff check --fix .

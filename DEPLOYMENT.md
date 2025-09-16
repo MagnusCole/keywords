@@ -42,8 +42,9 @@ python main.py --seeds "test keyword" --limit 5
 # Run tests to validate
 python -m pytest test_*.py -v
 
-# Check reliability analysis
-python reliability_analysis.py
+# Check reliability analysis (obsoleto)
+# python reliability_analysis.py
+pytest tests/
 ```
 pip install -r requirements.txt
 cp .env.example .env

@@ -8,18 +8,21 @@ import argparse
 import asyncio
 import logging
 import os
-import sys
 from datetime import datetime
+from typing import Any
 
-from reliability_report import generate_reliability_report
-from src.ads_volume import GoogleAdsVolumeProvider
-from src.categorization import KeywordCategorizer
-from src.clustering import SemanticClusterer
-from src.database import Keyword, KeywordDatabase
-from src.exporters import KeywordExporter
-from src.scoring import KeywordScorer
-from src.scrapers import CompetitorScraper, GoogleScraper
-from src.trends import TrendsAnalyzer
+from src.core.categorization import KeywordCategorizer
+from src.core.scoring import KeywordScorer
+from src.core.standardized_scoring import StandardizedScorer, create_scoring_config_from_yaml
+from src.db.database import Keyword, KeywordDatabase
+from src.io.ads_volume import GoogleAdsVolumeProvider
+from src.io.exporters import KeywordExporter
+from src.io.scrapers import CompetitorScraper, GoogleScraper
+from src.io.trends import TrendsAnalyzer
+from src.ml.clustering import SemanticClusterer
+from src.platform.exceptions_enterprise import ConfigError, NetworkError
+from src.platform.logging_config_enterprise import setup_logging
+from src.platform.settings import load_config
 
 try:
     from dotenv import load_dotenv
@@ -32,11 +35,12 @@ except ImportError as _e:
 class KeywordFinder:
     """Orquestador principal del sistema de keyword finding"""
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict | None = None, run_id: str | None = None):
         base = self._load_default_config()
         if config:
             base.update(config)
         self.config = base
+        self.run_id = run_id or f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self._setup_logging()
 
         # Inicializar componentes
@@ -53,12 +57,25 @@ class KeywordFinder:
             volume_weight=self.config["volume_weight"],
             competition_weight=self.config["competition_weight"],
         )
+
+        # Standardized scoring system (PR-04)
+        try:
+            scoring_config = create_scoring_config_from_yaml(self.config)
+            self.standardized_scorer = StandardizedScorer(scoring_config, self.run_id)
+            logging.info("Standardized scoring v1.0.0 enabled")
+        except Exception as e:
+            logging.warning(f"Standardized scoring initialization failed: {e}, using legacy scorer")
+            self.standardized_scorer = None
+
         self.exporter = KeywordExporter()
         self.clusterer = SemanticClusterer(use_hdbscan=self.config.get("use_hdbscan", False))
         self.ads_provider = GoogleAdsVolumeProvider()
         self.categorizer = KeywordCategorizer(
             target_geo=self.config["geo"], target_business="services"
         )
+
+        # Scoring metadata storage for export traceability
+        self.last_scoring_metadata: dict[str, Any] | None = None
 
         logging.info("KeywordFinder initialized successfully")
 
@@ -78,24 +95,28 @@ class KeywordFinder:
 
         # Sort keywords by score (descending) to take the top N
         sorted_kw = sorted(keywords, key=lambda x: x.get("score", 0), reverse=True)
-        
+
         if len(sorted_kw) <= target_filtered:
             # We have fewer keywords than target, use lenient thresholds
             return 0.0, 1.0
-            
+
         # Take the target_filtered-th keyword's score as our minimum threshold
         threshold_keyword = sorted_kw[target_filtered - 1]
         min_score_dynamic = max(0.0, threshold_keyword.get("score", 0) - 5.0)  # Small buffer
-        
+
         # For competition, find the max competition in our target set
         target_set = sorted_kw[:target_filtered]
         max_competition_dynamic = max([kw.get("competition", 0) for kw in target_set], default=1.0)
         max_competition_dynamic = min(1.0, max_competition_dynamic + 0.1)  # Small buffer
-        
-        logging.info(f"Volume targeting: adjusted thresholds to min_score={min_score_dynamic:.1f}, max_competition={max_competition_dynamic:.2f}")
+
+        logging.info(
+            f"Volume targeting: adjusted thresholds to min_score={min_score_dynamic:.1f}, max_competition={max_competition_dynamic:.2f}"
+        )
         return min_score_dynamic, max_competition_dynamic
 
-    def _diversify_seeds_for_clusters(self, current_seeds: list[str], current_clusters: int) -> list[str]:
+    def _diversify_seeds_for_clusters(
+        self, current_seeds: list[str], current_clusters: int
+    ) -> list[str]:
         """Generate additional diverse seeds to reach target cluster count"""
         target_clusters = self.config.get("target_clusters", 0)
         if target_clusters <= 0 or current_clusters >= target_clusters:
@@ -103,16 +124,46 @@ class KeywordFinder:
 
         # Predefined seed diversification patterns for Spanish markets
         diversification_patterns = {
-            "marketing": ["ventas", "negocios", "publicidad", "branding", "comunicacion", "redes sociales"],
+            "marketing": [
+                "ventas",
+                "negocios",
+                "publicidad",
+                "branding",
+                "comunicacion",
+                "redes sociales",
+            ],
             "ventas": ["marketing", "comercio", "negociacion", "clientes", "crm", "conversion"],
-            "negocios": ["empresas", "startups", "emprendimiento", "estrategia", "consultoria", "servicios"],
-            "curso": ["capacitacion", "entrenamiento", "seminario", "taller", "formacion", "educacion"],
+            "negocios": [
+                "empresas",
+                "startups",
+                "emprendimiento",
+                "estrategia",
+                "consultoria",
+                "servicios",
+            ],
+            "curso": [
+                "capacitacion",
+                "entrenamiento",
+                "seminario",
+                "taller",
+                "formacion",
+                "educacion",
+            ],
             "digital": ["online", "tecnologia", "web", "internet", "software", "herramientas"],
-            "consultoria": ["asesoria", "servicios", "profesional", "experto", "especialista", "coaching"],
+            "consultoria": [
+                "asesoria",
+                "servicios",
+                "profesional",
+                "experto",
+                "especialista",
+                "coaching",
+            ],
         }
 
         new_seeds = list(current_seeds)
-        seeds_to_add = max(1, (target_clusters - current_clusters) * 2)  # 2 seeds per missing cluster
+        seeds_to_add = max(
+            1, (target_clusters - current_clusters) * 2
+        )  # 2 seeds per missing cluster
 
         # Add diversification based on existing seeds
         for seed in current_seeds:
@@ -121,13 +172,24 @@ class KeywordFinder:
             for pattern, variations in diversification_patterns.items():
                 if pattern in seed.lower():
                     for var in variations:
-                        if var not in new_seeds and len(new_seeds) < len(current_seeds) + seeds_to_add:
+                        if (
+                            var not in new_seeds
+                            and len(new_seeds) < len(current_seeds) + seeds_to_add
+                        ):
                             new_seeds.append(var)
 
         # Add generic high-value seeds if we still need more
         generic_seeds = [
-            "servicios", "profesional", "herramientas", "solucion", "estrategia", 
-            "consultoria", "experto", "especialista", "empresa", "comercial"
+            "servicios",
+            "profesional",
+            "herramientas",
+            "solucion",
+            "estrategia",
+            "consultoria",
+            "experto",
+            "especialista",
+            "empresa",
+            "comercial",
         ]
         for generic in generic_seeds:
             if generic not in new_seeds and len(new_seeds) < len(current_seeds) + seeds_to_add:
@@ -135,42 +197,50 @@ class KeywordFinder:
 
         if len(new_seeds) > len(current_seeds):
             added_count = len(new_seeds) - len(current_seeds)
-            logging.info(f"Volume targeting: added {added_count} diverse seeds to reach target clusters")
+            logging.info(
+                f"Volume targeting: added {added_count} diverse seeds to reach target clusters"
+            )
 
         return new_seeds
 
-    def _print_volume_targeting_summary(self, total_raw: int, filtered_count: int, cluster_count: int):
+    def _print_volume_targeting_summary(
+        self, total_raw: int, filtered_count: int, cluster_count: int
+    ):
         """Print volume targeting performance summary"""
         target_raw = self.config.get("target_raw", 0)
         target_filtered = self.config.get("target_filtered", 0)
         target_clusters = self.config.get("target_clusters", 0)
-        
-        print(f"\n🎯 Volume Targeting Summary:")
+
+        print("\n🎯 Volume Targeting Summary:")
         print("-" * 50)
-        
+
         if target_raw > 0:
             status = "✅" if total_raw >= target_raw else "⚠️"
             print(f"Raw Keywords:      {status} {total_raw:,} (target: {target_raw:,})")
         else:
             print(f"Raw Keywords:      {total_raw:,} (no target)")
-            
+
         if target_filtered > 0:
-            status = "✅" if abs(filtered_count - target_filtered) <= 5 else "⚠️"  # 5 keyword tolerance
+            status = (
+                "✅" if abs(filtered_count - target_filtered) <= 5 else "⚠️"
+            )  # 5 keyword tolerance
             print(f"Filtered Keywords: {status} {filtered_count:,} (target: {target_filtered:,})")
         else:
             print(f"Filtered Keywords: {filtered_count:,} (no target)")
-            
+
         if target_clusters > 0:
-            status = "✅" if abs(cluster_count - target_clusters) <= 2 else "⚠️"  # 2 cluster tolerance
+            status = (
+                "✅" if abs(cluster_count - target_clusters) <= 2 else "⚠️"
+            )  # 2 cluster tolerance
             print(f"Clusters:          {status} {cluster_count} (target: {target_clusters})")
         else:
             print(f"Clusters:          {cluster_count} (no target)")
-            
+
         # Show funnel efficiency
         if total_raw > 0:
             retention_rate = (filtered_count / total_raw) * 100
             print(f"Retention Rate:    {retention_rate:.1f}% ({filtered_count:,}/{total_raw:,})")
-            
+
         if cluster_count > 0 and filtered_count > 0:
             avg_per_cluster = filtered_count / cluster_count
             print(f"Avg per Cluster:   {avg_per_cluster:.1f} keywords")
@@ -202,17 +272,23 @@ class KeywordFinder:
         }
 
     def _setup_logging(self):
-        """Configura el sistema de logging"""
-        log_level = logging.INFO
-        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        """Configura el sistema de logging usando el nuevo sistema JSON estructurado."""
+        # Obtener configuración de logging desde config
+        log_level = self.config.get("log_level", "INFO")
+        json_format = self.config.get("log_json_format", True)
+        log_file = self.config.get("log_filepath")
 
-        logging.basicConfig(
+        # Reemplazar {run_id} en log_file si existe
+        if log_file and "{run_id}" in log_file:
+            log_file = log_file.replace("{run_id}", self.run_id)
+
+        setup_logging(
+            run_id=self.run_id,
             level=log_level,
-            format=log_format,
-            handlers=[
-                logging.StreamHandler(sys.stdout),
-                logging.FileHandler(f'keyword_finder_{datetime.now().strftime("%Y%m%d")}.log'),
-            ],
+            format_type="enterprise" if json_format else "text",
+            log_file=log_file,
+            console_enabled=True,
+            file_enabled=bool(log_file),
         )
 
     async def find_keywords(  # noqa: C901
@@ -240,12 +316,14 @@ class KeywordFinder:
 
         # Fase 1: Expansión de keywords usando Google
         logging.info("Phase 1: Expanding keywords using Google sources")
-        
+
         # Check if we need to diversify seeds for cluster targeting
         target_clusters = self.config.get("target_clusters", 0)
         if target_clusters > 0:
             seed_keywords = self._diversify_seeds_for_clusters(seed_keywords, 0)
-            logging.info(f"Volume targeting: using {len(seed_keywords)} seeds for cluster diversity")
+            logging.info(
+                f"Volume targeting: using {len(seed_keywords)} seeds for cluster diversity"
+            )
 
         expanded_keywords = await self.scraper.expand_keywords(
             seed_keywords, include_alphabet_soup=self.config.get("alphabet_soup", False)
@@ -254,45 +332,49 @@ class KeywordFinder:
         # Count current raw keywords
         total_raw_count = sum(len(kws) for kws in expanded_keywords.values())
         self._last_raw_count = total_raw_count  # Store for reporting
-        
+
         # Volume targeting: expand more if needed to reach raw target
         if self._should_expand_more(total_raw_count):
             target_raw = self.config.get("target_raw", 0)
             max_expansion_rounds = 5  # Prevent infinite loops
             round_count = 0
-            
+
             while total_raw_count < target_raw and round_count < max_expansion_rounds:
                 round_count += 1
-                logging.info(f"Volume targeting: raw count {total_raw_count} < target {target_raw}, expanding (round {round_count})")
-                
+                logging.info(
+                    f"Volume targeting: raw count {total_raw_count} < target {target_raw}, expanding (round {round_count})"
+                )
+
                 # Get new seeds from current keyword pool
                 seen: set[str] = set()
                 for kws in expanded_keywords.values():
                     seen.update(kws)
                 current_pool = list(seen)
-                
+
                 # Select promising seeds for expansion
                 limit = min(50, len(current_pool))
                 new_seeds = current_pool[:limit]
-                
+
                 if not new_seeds:
                     break
-                    
+
                 round_result = await self.scraper.expand_keywords(
                     new_seeds, include_alphabet_soup=self.config.get("alphabet_soup", False)
                 )
-                
+
                 # Merge results
                 for seed, kws in round_result.items():
                     if seed not in expanded_keywords:
                         expanded_keywords[seed] = []
                     expanded_keywords[seed].extend(kws)
-                
+
                 # Update count
                 total_raw_count = sum(len(kws) for kws in expanded_keywords.values())
                 self._last_raw_count = total_raw_count  # Update stored count
-            
-            logging.info(f"Volume targeting: reached {total_raw_count} raw keywords (target: {target_raw})")
+
+            logging.info(
+                f"Volume targeting: reached {total_raw_count} raw keywords (target: {target_raw})"
+            )
 
         # Legacy iterative expansion (if configured via rounds and no volume targeting)
         elif self.config.get("target_raw", 0) == 0:
@@ -402,8 +484,24 @@ class KeywordFinder:
                         v = ads_volumes.get(kwd["keyword"])
                         if v and v > 0:
                             kwd["volume"] = int(v)
+            except NetworkError as e:
+                logging.warning(
+                    "Ads volume HTTP error; continuing with heuristics",
+                    extra={
+                        "operation": "ads_volume_fetch",
+                        "url": e.context.get("url"),
+                        "status_code": e.context.get("status_code"),
+                    },
+                )
             except Exception as e:
-                logging.warning(f"Ads volume integration failed; continuing with heuristics: {e}")
+                logging.warning(
+                    "Ads volume integration failed; continuing with heuristics",
+                    extra={
+                        "operation": "ads_volume_fetch",
+                        "error_type": type(e).__name__,
+                        "error": str(e),
+                    },
+                )
 
         # Fase 4: Categorización y filtrado
         logging.info("Phase 4: Categorizing and filtering keywords")
@@ -416,55 +514,95 @@ class KeywordFinder:
 
         # Fase 5: Scoring y ranking
         logging.info("Phase 5: Calculating scores and ranking")
-        scored_keywords = self.scorer.score_keywords_batch(all_keywords)
+
+        # Use standardized scoring if available, fallback to legacy
+        if self.standardized_scorer:
+            scored_keywords, scoring_metadata = self.standardized_scorer.score_batch(
+                all_keywords,
+                geo=self.config.get("geo", "PE"),
+                language=self.config.get("language", "es"),
+            )
+
+            # Store scoring metadata for export traceability
+            self.last_scoring_metadata = scoring_metadata.to_dict()
+
+            # Log scoring metadata for traceability
+            logging.info(
+                "Standardized scoring complete",
+                extra={
+                    "scoring_version": scoring_metadata.version,
+                    "scoring_config": scoring_metadata.config.__dict__,
+                    "market_norms": scoring_metadata.market_norms.__dict__,
+                    "keywords_processed": scoring_metadata.keywords_processed,
+                    "intent_reranked": scoring_metadata.intent_reranked,
+                },
+            )
+        else:
+            # Fallback to legacy scoring
+            scored_keywords = self.scorer.score_keywords_batch(all_keywords)
+            logging.info(f"Calculated advanced scores for {len(scored_keywords)} keywords")
+
+            # Store empty metadata for legacy scoring
+            self.last_scoring_metadata = None
 
         # Volume targeting: Apply dynamic filtering based on targets
         target_filtered = self.config.get("target_filtered", 0)
         if target_filtered > 0:
             min_score, max_competition = self._adjust_filtering_thresholds(scored_keywords)
-            
+
             # Apply dynamic thresholds
             filtered_keywords = []
             additional_rejected = []
-            
+
             for kw in scored_keywords:
-                if (kw.get("score", 0) >= min_score and 
-                    kw.get("competition", 1) <= max_competition):
+                if kw.get("score", 0) >= min_score and kw.get("competition", 1) <= max_competition:
                     filtered_keywords.append(kw)
                 else:
-                    additional_rejected.append({
-                        **kw,
-                        "rejection_reason": f"volume_targeting: score={kw.get('score', 0):.1f}<{min_score:.1f} or competition={kw.get('competition', 1):.2f}>{max_competition:.2f}"
-                    })
-            
+                    additional_rejected.append(
+                        {
+                            **kw,
+                            "rejection_reason": f"volume_targeting: score={kw.get('score', 0):.1f}<{min_score:.1f} or competition={kw.get('competition', 1):.2f}>{max_competition:.2f}",
+                        }
+                    )
+
             # Take exactly target_filtered keywords (sorted by score)
-            filtered_keywords = sorted(filtered_keywords, key=lambda x: x.get("score", 0), reverse=True)[:target_filtered]
+            filtered_keywords = sorted(
+                filtered_keywords, key=lambda x: x.get("score", 0), reverse=True
+            )[:target_filtered]
             rejected_keywords.extend(additional_rejected)
             scored_keywords = filtered_keywords
-            
-            logging.info(f"Volume targeting: filtered to exactly {len(scored_keywords)} keywords (target: {target_filtered})")
+
+            logging.info(
+                f"Volume targeting: filtered to exactly {len(scored_keywords)} keywords (target: {target_filtered})"
+            )
         else:
             # Apply configured static thresholds
             min_score = self.config.get("min_score", 0.0)
             max_competition = self.config.get("max_competition", 1.0)
-            
+
             if min_score > 0.0 or max_competition < 1.0:
                 filtered_keywords = []
                 additional_rejected = []
-                
+
                 for kw in scored_keywords:
-                    if (kw.get("score", 0) >= min_score and 
-                        kw.get("competition", 1) <= max_competition):
+                    if (
+                        kw.get("score", 0) >= min_score
+                        and kw.get("competition", 1) <= max_competition
+                    ):
                         filtered_keywords.append(kw)
                     else:
-                        additional_rejected.append({
-                            **kw,
-                            "rejection_reason": f"static_filter: score={kw.get('score', 0):.1f}<{min_score:.1f} or competition={kw.get('competition', 1):.2f}>{max_competition:.2f}"
-                        })
-                
+                        additional_rejected.append(
+                            {
+                                **kw,
+                                "rejection_reason": f"static_filter: score={kw.get('score', 0):.1f}<{min_score:.1f} or competition={kw.get('competition', 1):.2f}>{max_competition:.2f}",
+                            }
+                        )
+
                 rejected_keywords.extend(additional_rejected)
                 scored_keywords = filtered_keywords
-                logging.info(f"Static filtering: kept {len(scored_keywords)} keywords (min_score≥{min_score}, max_competition≤{max_competition})")
+                logging.info(
+                    f"Static filtering: kept {len(scored_keywords)} keywords (min_score≥{min_score}, max_competition≤{max_competition})"
+                )
 
         # Fase 4.5: Clustering inteligente de keywords
         logging.info("Phase 4.5: Creating intelligent keyword clusters")
@@ -490,70 +628,82 @@ class KeywordFinder:
         # Volume targeting: Check if we need more clusters
         target_clusters = self.config.get("target_clusters", 0)
         current_cluster_count = len(clusters)
-        
+
         if target_clusters > 0 and current_cluster_count < target_clusters:
-            logging.info(f"Volume targeting: need {target_clusters - current_cluster_count} more clusters")
-            
+            logging.info(
+                f"Volume targeting: need {target_clusters - current_cluster_count} more clusters"
+            )
+
             # If we have too few clusters, we could either:
             # 1. Split large clusters
             # 2. Re-run with more diverse seeds (would require recursive call)
             # For now, we'll split the largest clusters
-            
+
             while len(clusters) < target_clusters and clusters:
                 # Find the largest cluster
                 largest_cluster_key = max(clusters.keys(), key=lambda k: len(clusters[k]))
                 largest_cluster = clusters[largest_cluster_key]
-                
+
                 if len(largest_cluster) < 2:
                     break  # Can't split further
-                
+
                 # Split the cluster in half by score
                 largest_cluster.sort(key=lambda x: x.get("score", 0), reverse=True)
                 mid = len(largest_cluster) // 2
-                
+
                 cluster_1 = largest_cluster[:mid]
                 cluster_2 = largest_cluster[mid:]
-                
+
                 # Remove original cluster and add split clusters
                 del clusters[largest_cluster_key]
-                
-                base_name = largest_cluster_key.split('_', 1)[-1] if '_' in largest_cluster_key else "cluster"
+
+                base_name = (
+                    largest_cluster_key.split("_", 1)[-1]
+                    if "_" in largest_cluster_key
+                    else "cluster"
+                )
                 clusters[f"{len(clusters):03d}_{base_name}_high"] = cluster_1
                 clusters[f"{len(clusters):03d}_{base_name}_mid"] = cluster_2
-                
-                logging.info(f"Volume targeting: split cluster {largest_cluster_key} → {len(cluster_1)} + {len(cluster_2)} keywords")
-        
+
+                logging.info(
+                    f"Volume targeting: split cluster {largest_cluster_key} → {len(cluster_1)} + {len(cluster_2)} keywords"
+                )
+
         elif target_clusters > 0 and current_cluster_count > target_clusters:
             # Too many clusters, merge the smallest ones
-            logging.info(f"Volume targeting: merging {current_cluster_count - target_clusters} clusters")
-            
+            logging.info(
+                f"Volume targeting: merging {current_cluster_count - target_clusters} clusters"
+            )
+
             while len(clusters) > target_clusters and len(clusters) > 1:
                 # Find the two smallest clusters
                 sorted_clusters = sorted(clusters.items(), key=lambda x: len(x[1]))
-                
+
                 # Merge the two smallest
                 key1, cluster1 = sorted_clusters[0]
                 key2, cluster2 = sorted_clusters[1]
-                
+
                 merged_keywords = cluster1 + cluster2
                 merged_key = f"{len(clusters):03d}_merged_cluster"
-                
+
                 # Remove original clusters and add merged cluster
                 del clusters[key1]
                 del clusters[key2]
                 clusters[merged_key] = merged_keywords
-                
-                logging.info(f"Volume targeting: merged {key1} + {key2} → {len(merged_keywords)} keywords")
-        
-        logging.info(f"Created {len(clusters)} keyword clusters (target: {target_clusters or 'auto'})")
-        
+
+                logging.info(
+                    f"Volume targeting: merged {key1} + {key2} → {len(merged_keywords)} keywords"
+                )
+
+        logging.info(
+            f"Created {len(clusters)} keyword clusters (target: {target_clusters or 'auto'})"
+        )
+
         # Update cluster metadata for all keywords
         for cid, items in clusters.items():
             for it in items:
                 it["cluster_id"] = int(cid.split("_", 1)[0]) if "_" in cid else 0
-                it["cluster_label"] = (
-                    cid.split("_", 1)[1].replace("_", " ") if "_" in cid else cid
-                )
+                it["cluster_label"] = cid.split("_", 1)[1].replace("_", " ") if "_" in cid else cid
 
         # Fase 5: Guardar en base de datos
         logging.info("Phase 5: Saving to database")
@@ -613,7 +763,11 @@ class KeywordFinder:
             export_formats = ["csv", "pdf"]
 
         if "csv" in export_formats:
-            csv_file = self.exporter.export_to_csv(keywords, f"keyword_analysis_{timestamp}.csv")
+            csv_file = self.exporter.export_to_csv(
+                keywords,
+                f"keyword_analysis_{timestamp}.csv",
+                scoring_metadata=self.last_scoring_metadata,
+            )
             generated_files["csv"] = csv_file
             logging.info(f"CSV report generated: {csv_file}")
 
@@ -681,6 +835,15 @@ Ejemplos de uso:
   python main.py --seeds "curso python" --competitors "udemy.com" "coursera.org"
   python main.py --stats
         """,
+    )
+
+    # Configuración basada en YAML (PR-01)
+    parser.add_argument("--config", type=str, help="Ruta al archivo YAML de configuración")
+    parser.add_argument(
+        "--override",
+        type=str,
+        default=None,
+        help="Overrides tipo a.b.c=x, d=e para ajustar la configuración",
     )
 
     parser.add_argument("--seeds", nargs="+", help="Keywords semilla para expandir")
@@ -798,24 +961,157 @@ Ejemplos de uso:
 
     args = parser.parse_args()
 
-    # Crear instancia del keyword finder
-    finder = KeywordFinder(
-        config={
-            "semantic_clustering_mode": args.semantic_clustering,
-            "use_hdbscan": bool(args.hdbscan),
-            "ads_volume_enabled": args.ads_volume == "on",
-            "geo": args.geo,
-            "language": args.language,
-            "expansion_rounds": max(1, int(args.rounds)),
-            "alphabet_soup": bool(args.alphabet_soup),
+    # Cargar configuración YAML si se proporciona y preparar mapping → KeywordFinder
+    loaded_cfg: dict | None = None
+    cfg_seeds: list[str] | None = None
+    include_trends_from_cfg: bool | None = None
+
+    if args.config:
+        try:
+            appcfg = load_config(args.config, args.override)
+            data = appcfg.data
+
+            # Mapear a las claves planas esperadas por KeywordFinder
+            def _map_config(d: dict) -> dict:
+                run = d.get("run", {})
+                target = run.get("target", {})
+                expansion = d.get("expansion", {})
+                sources = d.get("sources", {})
+                filters = d.get("filters", {})
+                scoring = d.get("scoring", {})
+                weights = scoring.get("weights", {})
+                ml = d.get("ml", {})
+                clustering = ml.get("clustering", {})
+                embeddings = ml.get("embeddings", {})
+                io = d.get("io", {})
+                logging_cfg = d.get("logging", {})
+
+                # Derivar modo de clustering semántico
+                embeddings_enabled = bool(embeddings.get("enabled", True))
+                algo = str(clustering.get("algo", "auto")).lower()
+                if not embeddings_enabled:
+                    semantic_mode = "off"
+                else:
+                    semantic_mode = "auto" if algo in {"auto", "hdbscan", "kmeans"} else "auto"
+
+                return {
+                    "database_path": io.get("db_path", "keywords.db"),
+                    "alphabet_soup": bool(expansion.get("alphabet_soup", False)),
+                    "ads_volume_enabled": bool(sources.get("ads_volume", False)),
+                    "geo": run.get("geo", "PE"),
+                    "language": run.get("language", "es"),
+                    # Targets y filtros
+                    "target_raw": int(target.get("raw", 0) or 0),
+                    "target_filtered": int(target.get("filtered", 0) or 0),
+                    "target_clusters": int(target.get("clusters", 0) or 0),
+                    "min_score": float(filters.get("min_score", 0.0) or 0.0),
+                    "max_competition": float(filters.get("max_competition", 1.0) or 1.0),
+                    # Scoring weights
+                    "trend_weight": float(weights.get("trend", 0.1)),
+                    "volume_weight": float(weights.get("volume", 0.35)),
+                    "competition_weight": float(weights.get("competition", 0.1)),
+                    # Clustering
+                    "semantic_clustering_mode": semantic_mode,  # auto|on|off
+                    "use_hdbscan": algo == "hdbscan",
+                    # Logging configuration
+                    "log_level": logging_cfg.get("level", "INFO"),
+                    "log_json_format": bool(logging_cfg.get("json_format", True)),
+                    "log_console_safe": bool(logging_cfg.get("console_safe", True)),
+                    "log_filepath": logging_cfg.get("filepath"),
+                }
+
+            loaded_cfg = _map_config(data)
+            # Semillas e indicador de trends desde config
+            cfg_seeds = list(run_seeds) if (run_seeds := data.get("run", {}).get("seeds")) else None
+            include_trends_from_cfg = bool(data.get("sources", {}).get("trends", True))
+        except ConfigError as e:
+            logging.error(
+                "Configuration error loading YAML",
+                extra={"config_path": e.context.get("config_path"), "error": str(e)},
+            )
+            print(f"❌ Configuration error: {e}")
+            return
+        except Exception as e:
+            logging.error(
+                "Unexpected error loading YAML configuration",
+                extra={"error_type": type(e).__name__, "error": str(e)},
+            )
+            print(f"❌ Error cargando --config: {e}")
+            return
+
+    # Resolver precedencias: config.yaml → valores por defecto; CLI explícito sobreescribe
+    def _use_cfg_if_default(arg_value, arg_name: str, cfg_value):
+        try:
+            default_val = parser.get_default(arg_name)
+        except Exception:
+            default_val = None
+        return (
+            cfg_value
+            if (args.config and arg_value == default_val and cfg_value is not None)
+            else arg_value
+        )
+
+    # Preparar configuración final para KeywordFinder
+    final_cfg: dict = loaded_cfg.copy() if loaded_cfg else {}
+    final_cfg.update(
+        {
+            "semantic_clustering_mode": _use_cfg_if_default(
+                args.semantic_clustering,
+                "semantic_clustering",
+                final_cfg.get("semantic_clustering_mode", "auto"),
+            ),
+            "use_hdbscan": bool(args.hdbscan) or bool(final_cfg.get("use_hdbscan", False)),
+            "ads_volume_enabled": (
+                (args.ads_volume == "on")
+                if args.ads_volume
+                else bool(final_cfg.get("ads_volume_enabled", True))
+            ),
+            "geo": _use_cfg_if_default(args.geo, "geo", final_cfg.get("geo")),
+            "language": _use_cfg_if_default(args.language, "language", final_cfg.get("language")),
+            "expansion_rounds": max(
+                1,
+                int(
+                    _use_cfg_if_default(args.rounds, "rounds", final_cfg.get("expansion_rounds", 1))
+                ),
+            ),
+            "alphabet_soup": bool(
+                _use_cfg_if_default(
+                    args.alphabet_soup, "alphabet_soup", final_cfg.get("alphabet_soup", False)
+                )
+            ),
             # Volume targeting controls
-            "target_raw": args.target_raw,
-            "target_filtered": args.target_filtered,
-            "target_clusters": args.target_clusters,
-            "min_score": args.min_score,
-            "max_competition": args.max_competition,
+            "target_raw": int(
+                _use_cfg_if_default(args.target_raw, "target_raw", final_cfg.get("target_raw", 0))
+                or 0
+            ),
+            "target_filtered": int(
+                _use_cfg_if_default(
+                    args.target_filtered, "target_filtered", final_cfg.get("target_filtered", 0)
+                )
+                or 0
+            ),
+            "target_clusters": int(
+                _use_cfg_if_default(
+                    args.target_clusters, "target_clusters", final_cfg.get("target_clusters", 0)
+                )
+                or 0
+            ),
+            "min_score": float(
+                _use_cfg_if_default(args.min_score, "min_score", final_cfg.get("min_score", 0.0))
+            ),
+            "max_competition": float(
+                _use_cfg_if_default(
+                    args.max_competition, "max_competition", final_cfg.get("max_competition", 1.0)
+                )
+            ),
         }
     )
+
+    # Generar run_id para esta ejecución
+    run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    # Crear instancia del keyword finder
+    finder = KeywordFinder(config=final_cfg, run_id=run_id)
 
     try:
         # Mostrar estadísticas
@@ -878,7 +1174,7 @@ Ejemplos de uso:
 
             return
 
-        # Construir lista de seeds desde CLI y/o archivo
+        # Construir lista de seeds desde CLI, archivo y/o config.yaml
         all_seeds: list[str] = []
         if args.seeds:
             all_seeds.extend(args.seeds)
@@ -899,6 +1195,10 @@ Ejemplos de uso:
                 print(f"❌ Error leyendo --seeds-file: {e}")
                 return
 
+        # Si no hay seeds por CLI/archivo y hay en config, usarlas
+        if not all_seeds and cfg_seeds:
+            all_seeds.extend(cfg_seeds)
+
         # Deduplicar y validar
         all_seeds = sorted({s.strip() for s in all_seeds if s and len(s.strip()) >= 2})
         if not all_seeds:
@@ -912,9 +1212,14 @@ Ejemplos de uso:
 
         # Ejecutar búsqueda de keywords
         start_ts = datetime.now()
+        # Determinar si incluir trends: config.sources.trends (si existe) y bandera --no-trends
+        include_trends = True if include_trends_from_cfg is None else include_trends_from_cfg
+        if args.no_trends:
+            include_trends = False
+
         keywords, clusters, rejected = await finder.find_keywords(
             seed_keywords=all_seeds,
-            include_trends=not args.no_trends,
+            include_trends=include_trends,
             include_competitors=args.competitors,
         )
 
@@ -923,16 +1228,18 @@ Ejemplos de uso:
             return
 
         # Calculate raw keyword count for targeting summary
-        total_raw_count = getattr(finder, '_last_raw_count', len(keywords) * 2)  # Use stored count or estimate
+        total_raw_count = getattr(
+            finder, "_last_raw_count", len(keywords) * 2
+        )  # Use stored count or estimate
 
         # Show volume targeting summary if any targets are set
-        if (finder.config.get("target_raw", 0) > 0 or 
-            finder.config.get("target_filtered", 0) > 0 or 
-            finder.config.get("target_clusters", 0) > 0):
+        if (
+            finder.config.get("target_raw", 0) > 0
+            or finder.config.get("target_filtered", 0) > 0
+            or finder.config.get("target_clusters", 0) > 0
+        ):
             finder._print_volume_targeting_summary(
-                total_raw=total_raw_count,
-                filtered_count=len(keywords), 
-                cluster_count=len(clusters)
+                total_raw=total_raw_count, filtered_count=len(keywords), cluster_count=len(clusters)
             )
 
         # Mostrar resultados
@@ -953,9 +1260,6 @@ Ejemplos de uso:
 
         for format_type, filepath in reports.items():
             print(f"✅ {format_type.upper()}: {filepath}")
-
-        # Generate reliability report
-        generate_reliability_report(top_keywords, rejected)
 
         # Persist run metrics
         try:
