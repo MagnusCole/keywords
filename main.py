@@ -21,7 +21,13 @@ from src.io.scrapers import CompetitorScraper, GoogleScraper
 from src.io.trends import TrendsAnalyzer
 from src.ml.clustering import SemanticClusterer
 from src.platform.exceptions_enterprise import ConfigError, NetworkError
-from src.platform.logging_config_enterprise import setup_logging
+from src.platform.enhanced_logging import (
+    setup_enhanced_logging, 
+    get_structured_logger,
+    set_log_context,
+    create_config_error,
+    create_system_error
+)
 from src.platform.settings import load_config
 
 try:
@@ -206,40 +212,48 @@ class KeywordFinder:
     def _print_volume_targeting_summary(
         self, total_raw: int, filtered_count: int, cluster_count: int
     ):
-        """Print volume targeting performance summary"""
+        """Print volume targeting performance summary with enhanced logging"""
         target_raw = self.config.get("target_raw", 0)
         target_filtered = self.config.get("target_filtered", 0)
         target_clusters = self.config.get("target_clusters", 0)
 
-        print("\n🎯 Volume Targeting Summary:")
-        print("-" * 50)
-
+        logger = get_structured_logger(__name__)
+        
+        logger.info("📊 Volume targeting summary", operation="volume_summary")
+        
+        # Raw keywords status
         if target_raw > 0:
             status = "✅" if total_raw >= target_raw else "⚠️"
-            print(f"Raw Keywords:      {status} {total_raw:,} (target: {target_raw:,})")
+            logger.info(f"Raw keywords: {status} {total_raw:,} (target: {target_raw:,})",
+                       raw_count=total_raw, target_raw=target_raw, status=status)
         else:
-            print(f"Raw Keywords:      {total_raw:,} (no target)")
+            logger.info(f"Raw keywords: {total_raw:,} (no target)", raw_count=total_raw)
 
+        # Filtered keywords status
         if target_filtered > 0:
             status = (
                 "✅" if abs(filtered_count - target_filtered) <= 5 else "⚠️"
             )  # 5 keyword tolerance
-            print(f"Filtered Keywords: {status} {filtered_count:,} (target: {target_filtered:,})")
+            logger.info(f"Filtered keywords: {status} {filtered_count:,} (target: {target_filtered:,})",
+                       filtered_count=filtered_count, target_filtered=target_filtered, status=status)
         else:
-            print(f"Filtered Keywords: {filtered_count:,} (no target)")
+            logger.info(f"Filtered keywords: {filtered_count:,} (no target)", filtered_count=filtered_count)
 
+        # Clusters status
         if target_clusters > 0:
             status = (
                 "✅" if abs(cluster_count - target_clusters) <= 2 else "⚠️"
             )  # 2 cluster tolerance
-            print(f"Clusters:          {status} {cluster_count} (target: {target_clusters})")
+            logger.info(f"Clusters: {status} {cluster_count} (target: {target_clusters})",
+                       cluster_count=cluster_count, target_clusters=target_clusters, status=status)
         else:
-            print(f"Clusters:          {cluster_count} (no target)")
+            logger.info(f"Clusters: {cluster_count} (no target)", cluster_count=cluster_count)
 
-        # Show funnel efficiency
+        # Performance metrics
         if total_raw > 0:
             retention_rate = (filtered_count / total_raw) * 100
-            print(f"Retention Rate:    {retention_rate:.1f}% ({filtered_count:,}/{total_raw:,})")
+            logger.info(f"Retention rate: {retention_rate:.1f}% ({filtered_count:,}/{total_raw:,})",
+                       retention_rate=retention_rate, filtered_count=filtered_count, total_raw=total_raw)
 
         if cluster_count > 0 and filtered_count > 0:
             avg_per_cluster = filtered_count / cluster_count
@@ -272,23 +286,32 @@ class KeywordFinder:
         }
 
     def _setup_logging(self):
-        """Configura el sistema de logging usando el nuevo sistema JSON estructurado."""
-        # Obtener configuración de logging desde config
+        """Setup enhanced enterprise logging system."""
+        # Get logging configuration
         log_level = self.config.get("log_level", "INFO")
         json_format = self.config.get("log_json_format", True)
         log_file = self.config.get("log_filepath")
 
-        # Reemplazar {run_id} en log_file si existe
+        # Replace {run_id} in log_file if exists
         if log_file and "{run_id}" in log_file:
             log_file = log_file.replace("{run_id}", self.run_id)
 
-        setup_logging(
+        # Setup enhanced enterprise logging
+        setup_enhanced_logging(
             run_id=self.run_id,
             level=log_level,
-            format_type="enterprise" if json_format else "text",
             log_file=log_file,
             console_enabled=True,
-            file_enabled=bool(log_file),
+            service_name="keyword-intel",
+            environment=self.config.get("environment", "development"),
+            component="main"
+        )
+        
+        # Set logging context
+        set_log_context(
+            run_id=self.run_id,
+            component="keyword_finder",
+            operation="main_execution"
         )
 
     async def find_keywords(  # noqa: C901
