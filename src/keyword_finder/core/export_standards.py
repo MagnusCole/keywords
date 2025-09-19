@@ -5,14 +5,15 @@ Export standards and configurations for Keyword Finder.
 import csv
 import json
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Tuple
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 
 @dataclass
 class ExportMetadata:
     """Metadata for export operations."""
+
     record_count: int
     export_version: str
     timestamp: str
@@ -77,16 +78,16 @@ class StandardizedExporter:
 
     def export_keywords_csv(
         self,
-        keywords: List[Dict[str, Any]],
+        keywords: list[dict[str, Any]],
         run_id: str = "",
         geo: str = "",
         language: str = "",
         transparency_mode: bool = True,
         filename: str | None = None,
-    ) -> Tuple[str, ExportMetadata]:
+    ) -> tuple[str, ExportMetadata]:
         """Export keywords to standardized CSV format."""
         if not filename:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"keyword_analysis_{timestamp}.csv"
 
         filepath = self.export_dir / filename
@@ -95,16 +96,31 @@ class StandardizedExporter:
             with open(filepath, "w", newline="", encoding=self.standard.encoding) as f:
                 # Standard keyword export columns
                 fieldnames = [
-                    "keyword", "score", "volume", "competition", "trend_score",
-                    "intent", "intent_prob", "geo", "language", "cluster_id",
-                    "cluster_label", "source", "category"
+                    "keyword",
+                    "score",
+                    "volume",
+                    "competition",
+                    "trend_score",
+                    "intent",
+                    "intent_prob",
+                    "geo",
+                    "language",
+                    "cluster_id",
+                    "cluster_label",
+                    "source",
+                    "category",
                 ]
 
                 if transparency_mode:
-                    fieldnames.extend([
-                        "volume_weight", "trend_weight", "competition_weight",
-                        "run_id", "export_timestamp"
-                    ])
+                    fieldnames.extend(
+                        [
+                            "volume_weight",
+                            "trend_weight",
+                            "competition_weight",
+                            "run_id",
+                            "export_timestamp",
+                        ]
+                    )
 
                 writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=self.standard.delimiter)
                 writer.writeheader()
@@ -129,13 +145,15 @@ class StandardizedExporter:
                     }
 
                     if transparency_mode:
-                        row.update({
-                            "volume_weight": keyword.get("volume_weight", 0.4),
-                            "trend_weight": keyword.get("trend_weight", 0.4),
-                            "competition_weight": keyword.get("competition_weight", 0.2),
-                            "run_id": run_id,
-                            "export_timestamp": export_timestamp,
-                        })
+                        row.update(
+                            {
+                                "volume_weight": keyword.get("volume_weight", 0.4),
+                                "trend_weight": keyword.get("trend_weight", 0.4),
+                                "competition_weight": keyword.get("competition_weight", 0.2),
+                                "run_id": run_id,
+                                "export_timestamp": export_timestamp,
+                            }
+                        )
 
                     writer.writerow(row)
 
@@ -143,7 +161,7 @@ class StandardizedExporter:
                 record_count=len(keywords),
                 export_version="2.0",
                 timestamp=export_timestamp,
-                format="csv"
+                format="csv",
             )
 
             return str(filepath), metadata
@@ -153,15 +171,15 @@ class StandardizedExporter:
 
     def export_cluster_summary(
         self,
-        clusters: Dict[str, List[Dict[str, Any]]],
+        clusters: dict[str, list[dict[str, Any]]],
         run_id: str = "",
         geo: str = "",
         language: str = "",
         filename: str | None = None,
-    ) -> Tuple[str, ExportMetadata]:
+    ) -> tuple[str, ExportMetadata]:
         """Export cluster summary with statistics."""
         if not filename:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"clusters_summary_{timestamp}.csv"
 
         filepath = self.export_dir / filename
@@ -169,8 +187,16 @@ class StandardizedExporter:
         try:
             with open(filepath, "w", newline="", encoding=self.standard.encoding) as f:
                 fieldnames = [
-                    "cluster_id", "cluster_label", "size", "avg_score",
-                    "avg_volume", "avg_competition", "top_keywords", "run_id", "geo", "language"
+                    "cluster_id",
+                    "cluster_label",
+                    "size",
+                    "avg_score",
+                    "avg_volume",
+                    "avg_competition",
+                    "top_keywords",
+                    "run_id",
+                    "geo",
+                    "language",
                 ]
 
                 writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=self.standard.delimiter)
@@ -188,32 +214,40 @@ class StandardizedExporter:
 
                     avg_score = sum(float(item.get("score", 0)) for item in items) / size
                     avg_volume = sum(int(item.get("volume", 0)) for item in items) / size
-                    avg_competition = sum(float(item.get("competition", 0)) for item in items) / size
+                    avg_competition = (
+                        sum(float(item.get("competition", 0)) for item in items) / size
+                    )
 
                     # Get top 3 keywords by score
-                    sorted_items = sorted(items, key=lambda x: float(x.get("score", 0)), reverse=True)
+                    sorted_items = sorted(
+                        items, key=lambda x: float(x.get("score", 0)), reverse=True
+                    )
                     top_keywords = "; ".join(item.get("keyword", "") for item in sorted_items[:3])
 
-                    cluster_label = items[0].get("cluster_label", cluster_id) if items else cluster_id
+                    cluster_label = (
+                        items[0].get("cluster_label", cluster_id) if items else cluster_id
+                    )
 
-                    writer.writerow({
-                        "cluster_id": cluster_id,
-                        "cluster_label": cluster_label,
-                        "size": size,
-                        "avg_score": round(avg_score, 2),
-                        "avg_volume": round(avg_volume, 0),
-                        "avg_competition": round(avg_competition, 2),
-                        "top_keywords": top_keywords,
-                        "run_id": run_id,
-                        "geo": geo,
-                        "language": language,
-                    })
+                    writer.writerow(
+                        {
+                            "cluster_id": cluster_id,
+                            "cluster_label": cluster_label,
+                            "size": size,
+                            "avg_score": round(avg_score, 2),
+                            "avg_volume": round(avg_volume, 0),
+                            "avg_competition": round(avg_competition, 2),
+                            "top_keywords": top_keywords,
+                            "run_id": run_id,
+                            "geo": geo,
+                            "language": language,
+                        }
+                    )
 
             metadata = ExportMetadata(
                 record_count=total_records,
                 export_version="2.0",
                 timestamp=export_timestamp,
-                format="csv"
+                format="csv",
             )
 
             return str(filepath), metadata
@@ -253,7 +287,6 @@ class StandardizedExporter:
 
     def _export_json(self, data: list, path: Path) -> None:
         """Export data as JSON."""
-        import json
 
         with open(path, "w", encoding=self.standard.encoding) as f:
             json.dump(data, f, indent=2, ensure_ascii=False)

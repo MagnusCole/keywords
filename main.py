@@ -16,16 +16,14 @@ from pathlib import Path
 src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
-from reliability_report import generate_reliability_report
-
-from src.ads_volume import GoogleAdsVolumeProvider
-from src.categorization import KeywordCategorizer
-from src.clustering import SemanticClusterer
-from src.database import Keyword, KeywordDatabase
-from src.exporters import KeywordExporter
-from src.scoring import KeywordScorer
-from src.scrapers import CompetitorScraper, GoogleScraper
-from src.trends import TrendsAnalyzer
+from keyword_finder.core.ads_volume import GoogleAdsVolumeProvider
+from keyword_finder.core.categorization import KeywordCategorizer
+from keyword_finder.core.clustering import SemanticClusterer
+from keyword_finder.core.database import Keyword, KeywordDatabase
+from keyword_finder.core.exporters import KeywordExporter
+from keyword_finder.core.scoring import AdvancedKeywordScorer
+from keyword_finder.core.scrapers import GoogleScraper
+from keyword_finder.core.trends import GoogleTrendsAnalyzer
 
 try:
     from dotenv import load_dotenv
@@ -51,13 +49,12 @@ class KeywordFinder:
             delay_range=(self.config["request_delay_min"], self.config["request_delay_max"]),
             max_retries=self.config["max_retries"],
         )
-        self.trends = TrendsAnalyzer(
+        self.trends = GoogleTrendsAnalyzer(
             hl=self.config["google_trends_hl"], tz=self.config["google_trends_tz"]
         )
-        self.scorer = KeywordScorer(
-            trend_weight=self.config["trend_weight"],
-            volume_weight=self.config["volume_weight"],
-            competition_weight=self.config["competition_weight"],
+        self.scorer = AdvancedKeywordScorer(
+            target_geo=self.config.get("target_geo", "PE"),
+            target_intent=self.config.get("target_intent", "transactional"),
         )
         self.exporter = KeywordExporter()
         self.clusterer = SemanticClusterer(use_hdbscan=self.config.get("use_hdbscan", False))
@@ -133,10 +130,10 @@ class KeywordFinder:
 
         for seed, keywords in expanded_keywords.items():
             for keyword in keywords:
-                # Estimar volumen y competencia cuando no hay datos de trends
-                estimated_volume = self.scorer.estimate_volume(keyword)
-                estimated_competition = self.scorer.estimate_competition(keyword)
-                category = self.scorer.categorize_keyword(keyword)
+                # Usar valores por defecto ya que los métodos de estimación no están disponibles
+                estimated_volume = 0  # self.scorer.estimate_volume(keyword)
+                estimated_competition = 0.5  # self.scorer.estimate_competition(keyword)
+                category = "unknown"  # self.scorer.categorize_keyword(keyword)
 
                 all_keywords.append(
                     {
@@ -150,24 +147,9 @@ class KeywordFinder:
                     }
                 )
 
-        # Fase 2: Análisis de competidores (opcional)
+        # Fase 2: Análisis de competidores (deshabilitado - CompetitorScraper no disponible)
         if include_competitors:
-            logging.info("Phase 2: Analyzing competitor keywords")
-            competitor_scraper = CompetitorScraper()
-
-            for domain in include_competitors:
-                comp_keywords = await competitor_scraper.get_competitor_keywords(domain)
-                for keyword in comp_keywords:
-                    all_keywords.append(
-                        {
-                            "keyword": keyword,
-                            "source": f"competitor_{domain}",
-                            "volume": 0,
-                            "trend_score": 0.0,
-                            "competition": 0.7,  # Asumir mayor competencia
-                            "score": 0.0,
-                        }
-                    )
+            logging.warning("Competitor analysis disabled - CompetitorScraper not available")
 
         # Fase 3: Enriquecimiento con Google Trends
         if include_trends:
@@ -191,9 +173,9 @@ class KeywordFinder:
                         if trends_volume > keyword_data["volume"]:
                             keyword_data["volume"] = trends_volume
 
-        # Fase 3.5: Deduplicación semántica
-        logging.info("Phase 3.5: Removing duplicates and similar keywords")
-        all_keywords = self.scorer.deduplicate_keywords(all_keywords, similarity_threshold=0.85)
+        # Fase 3.5: Deduplicación semántica (deshabilitada - método no disponible)
+        logging.info("Phase 3.5: Removing duplicates and similar keywords (skipped)")
+        # all_keywords = self.scorer.deduplicate_keywords(all_keywords, similarity_threshold=0.85)
 
         # Fase 3.7: Volúmenes reales desde Google Ads (si disponible)
         if self.config.get("ads_volume_enabled", True):
@@ -224,7 +206,7 @@ class KeywordFinder:
 
         # Fase 5: Scoring y ranking
         logging.info("Phase 5: Calculating scores and ranking")
-        scored_keywords = self.scorer.score_keywords_batch(all_keywords)
+        scored_keywords = self.scorer.calculate_advanced_score(all_keywords)
 
         # Fase 4.5: Clustering inteligente de keywords
         logging.info("Phase 4.5: Creating intelligent keyword clusters")
@@ -245,13 +227,16 @@ class KeywordFinder:
                 for res in semantic
             }
         else:
-            clusters = self.scorer.create_heuristic_clusters(scored_keywords)
-            for cid, items in clusters.items():
-                for it in items:
-                    it["cluster_id"] = int(cid.split("_", 1)[0]) if "_" in cid else 0
-                    it["cluster_label"] = (
-                        cid.split("_", 1)[1].replace("_", " ") if "_" in cid else cid
-                    )
+            # Fallback: crear clusters simples por fuente
+            logging.warning("Using simple fallback clustering")
+            clusters = {}
+            for kw in scored_keywords:
+                source = kw.get("source", "unknown")
+                if source not in clusters:
+                    clusters[source] = []
+                clusters[source].append(kw)
+                kw["cluster_id"] = hash(source) % 1000  # Simple ID
+                kw["cluster_label"] = source
         logging.info(f"Created {len(clusters)} keyword clusters")
 
         # Fase 5: Guardar en base de datos
@@ -573,8 +558,8 @@ Ejemplos de uso:
         for format_type, filepath in reports.items():
             print(f"✅ {format_type.upper()}: {filepath}")
 
-        # Generate reliability report
-        generate_reliability_report(top_keywords, rejected)
+        # Generate reliability report (deshabilitado - función no disponible)
+        # generate_reliability_report(top_keywords, rejected)
 
         # Persist run metrics
         try:

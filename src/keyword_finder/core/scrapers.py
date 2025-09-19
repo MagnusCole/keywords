@@ -619,20 +619,20 @@ class GoogleScraper:
                 for result in autocomplete_results:
                     if isinstance(result, list):
                         all_keywords.extend(result)
-                    elif isinstance(result, (Exception, asyncio.CancelledError)):
+                    elif isinstance(result, Exception | asyncio.CancelledError):
                         logging.debug(f"Autocomplete task result: {type(result).__name__}")
 
                 # Process YouTube results
                 for result in youtube_results:
                     if isinstance(result, list):
                         all_keywords.extend(result)
-                    elif isinstance(result, (Exception, asyncio.CancelledError)):
+                    elif isinstance(result, Exception | asyncio.CancelledError):
                         logging.debug(f"YouTube task result: {type(result).__name__}")
 
                 # Add related searches
                 if isinstance(related_results, list):
                     all_keywords.extend(related_results)
-                elif isinstance(related_results, (Exception, asyncio.CancelledError)):
+                elif isinstance(related_results, Exception | asyncio.CancelledError):
                     logging.debug(f"Related search result: {type(related_results).__name__}")
 
                 # Remove duplicates and store

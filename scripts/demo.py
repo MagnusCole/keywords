@@ -10,9 +10,9 @@ from pathlib import Path
 # Agregar src al path (dos niveles arriba desde tools/)
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
-from database import Keyword, KeywordDatabase
-from exporters import KeywordExporter
-from scoring import KeywordScorer
+from keyword_finder.core.database import Keyword, KeywordDatabase
+from keyword_finder.core.exporters import KeywordExporter
+from keyword_finder.core.scoring import BasicKeywordScorer
 
 
 async def demo_keyword_finder() -> None:
@@ -22,7 +22,7 @@ async def demo_keyword_finder() -> None:
 
     # Inicializar componentes
     db = KeywordDatabase()
-    scorer = KeywordScorer()
+    scorer = BasicKeywordScorer()
     exporter = KeywordExporter()
 
     # Keywords de ejemplo para marketing digital
@@ -100,7 +100,7 @@ async def demo_keyword_finder() -> None:
     ]
 
     # Calcular scores y crear objetos Keyword
-    scored_keywords = scorer.score_keywords_batch(demo_keywords)
+    scored_keywords = scorer.calculate_score(demo_keywords)
     keyword_objects = []
 
     for kw_data in scored_keywords:
