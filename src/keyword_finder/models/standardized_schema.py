@@ -5,7 +5,7 @@ Standardized database schema management for Keyword Finder.
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 
 class StandardizedSchema:
@@ -123,7 +123,7 @@ class StandardizedSchema:
             conn.execute(index_sql)
 
 
-def get_schema_info() -> Dict[str, Any]:
+def get_schema_info() -> dict[str, Any]:
     """Get information about the current schema."""
     return {
         "version": StandardizedSchema.SCHEMA_VERSION,

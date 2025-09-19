@@ -11,14 +11,21 @@ import os
 from datetime import datetime
 from typing import Any
 
-from .categorization import KeywordCategorizer
-from .scoring import KeywordScorer
-from .database import Keyword, KeywordDatabase
+from ..utils.logging_utils import (
+    ConfigError,
+    NetworkError,
+    load_config,
+    set_log_context,
+    setup_enhanced_logging,
+)
 from .ads_volume import GoogleAdsVolumeProvider
+from .categorization import KeywordCategorizer
+from .clustering import SemanticClusterer
+from .database import Keyword, KeywordDatabase
 from .exporters import KeywordExporter
+from .scoring import KeywordScorer
 from .scrapers import GoogleScraper
 from .trends import GoogleTrendsAnalyzer
-from .clustering import SemanticClusterer
 
 # Setup basic logging
 logging.basicConfig(
@@ -212,10 +219,7 @@ class KeywordFinder:
         if target_raw > 0:
             status = "✅" if total_raw >= target_raw else "⚠️"
             logger.info(
-                f"Raw keywords: {status} {total_raw:,} (target: {target_raw:,})",
-                raw_count=total_raw,
-                target_raw=target_raw,
-                status=status,
+                f"Raw keywords: {status} {total_raw:,} (target: {target_raw:,})"
             )
         else:
             logger.info(f"Raw keywords: {total_raw:,} (no target)")
@@ -237,22 +241,16 @@ class KeywordFinder:
                 "✅" if abs(cluster_count - target_clusters) <= 2 else "⚠️"
             )  # 2 cluster tolerance
             logger.info(
-                f"Clusters: {status} {cluster_count} (target: {target_clusters})",
-                cluster_count=cluster_count,
-                target_clusters=target_clusters,
-                status=status,
+                f"Clusters: {status} {cluster_count} (target: {target_clusters})"
             )
         else:
-            logger.info(f"Clusters: {cluster_count} (no target)", cluster_count=cluster_count)
+            logger.info(f"Clusters: {cluster_count} (no target)")
 
         # Performance metrics
         if total_raw > 0:
             retention_rate = (filtered_count / total_raw) * 100
             logger.info(
-                f"Retention rate: {retention_rate:.1f}% ({filtered_count:,}/{total_raw:,})",
-                retention_rate=retention_rate,
-                filtered_count=filtered_count,
-                total_raw=total_raw,
+                f"Retention rate: {retention_rate:.1f}% ({filtered_count:,}/{total_raw:,})"
             )
 
         if cluster_count > 0 and filtered_count > 0:
@@ -289,7 +287,6 @@ class KeywordFinder:
         """Setup enhanced enterprise logging system."""
         # Get logging configuration
         log_level = self.config.get("log_level", "INFO")
-        json_format = self.config.get("log_json_format", True)
         log_file = self.config.get("log_filepath")
 
         # Replace {run_id} in log_file if exists

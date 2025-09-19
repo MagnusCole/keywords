@@ -3,8 +3,7 @@ Schema definitions for Keyword Finder database models.
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
-from datetime import datetime
+from typing import Any
 
 
 @dataclass
@@ -21,19 +20,19 @@ class EnhancedKeyword:
     geo: str = ""
     language: str = ""
     intent: str = ""
-    cluster_id: Optional[int] = None
-    cluster_label: Optional[str] = None
+    cluster_id: int | None = None
+    cluster_label: str | None = None
     data_source: str = "heurístico"
-    run_id: Optional[str] = None
+    run_id: str | None = None
     data_version: int = 1
     trend_weight: float = 0.4
     volume_weight: float = 0.4
     competition_weight: float = 0.2
     intent_prob: float = 0.0
-    last_seen: Optional[str] = None
-    updated_at: Optional[str] = None
+    last_seen: str | None = None
+    updated_at: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for database storage."""
         return {
             "keyword": self.keyword,
@@ -72,9 +71,9 @@ class ClusterMetadata:
     avg_volume: int
     dominant_intent: str
     dominant_data_source: str
-    created_at: Optional[str] = None
+    created_at: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for database storage."""
         return {
             "cluster_id": self.cluster_id,
@@ -95,18 +94,18 @@ class RunMetadata:
 
     run_id: str
     started_at: str
-    finished_at: Optional[str] = None
+    finished_at: str | None = None
     profile: str = "development"
     geo: str = ""
     language: str = ""
-    seeds: Optional[List[str]] = None
-    config_hash: Optional[str] = None
+    seeds: list[str] | None = None
+    config_hash: str | None = None
     keywords_discovered: int = 0
     keywords_filtered: int = 0
     keywords_clustered: int = 0
     clusters_created: int = 0
-    duration_seconds: Optional[float] = None
-    sources_used: Optional[List[str]] = None
+    duration_seconds: float | None = None
+    sources_used: list[str] | None = None
 
     def __post_init__(self):
         if self.seeds is None:
@@ -114,7 +113,7 @@ class RunMetadata:
         if self.sources_used is None:
             self.sources_used = []
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for database storage."""
         return {
             "run_id": self.run_id,

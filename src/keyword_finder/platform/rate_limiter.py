@@ -6,7 +6,6 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 import httpx
 
@@ -64,7 +63,7 @@ class ThrottledSession:
     def __init__(self, rate_limiter: RateLimiter, timeout: float = 30.0):
         self.rate_limiter = rate_limiter
         self.timeout = timeout
-        self.session: Optional[httpx.AsyncClient] = None
+        self.session: httpx.AsyncClient | None = None
 
     async def __aenter__(self):
         self.session = httpx.AsyncClient(timeout=self.timeout)

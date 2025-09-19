@@ -3,8 +3,8 @@ Export standards and configurations for Keyword Finder.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any
 
 
 @dataclass
@@ -15,11 +15,11 @@ class ExportStandard:
     format: str
     include_metadata: bool = True
     include_timestamps: bool = True
-    compression: Optional[str] = None
+    compression: str | None = None
     delimiter: str = ","
     encoding: str = "utf-8"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "name": self.name,

@@ -574,24 +574,24 @@ class GoogleScraper:
                 # Limitar para evitar explosión
                 variations.extend(addl[: max(0, 36)])
 
-            # Crear tasks para autocomplete suggestions (parallelized)
-            autocomplete_tasks = [
-                self._get_autocomplete_with_semaphore(v, request_semaphore) for v in variations
-            ]
-
-            # Crear tasks para YouTube suggestions (limited to avoid rate limits)
-            youtube_tasks = [
-                self._get_youtube_with_semaphore(v, request_semaphore)
-                for v in variations[:5]  # Limitar para evitar rate limits
-            ]
-
-            # Task para related searches
-            related_task = self._get_related_with_semaphore(seed, request_semaphore)
-
             # Ejecutar todas las tasks en paralelo con timeout general
             try:
                 # Use asyncio.wait_for with overall timeout for the entire operation
-                async def gather_all_results():
+                async def gather_all_results(current_variations, current_seed, semaphore):
+                    # Crear tasks para autocomplete suggestions (parallelized)
+                    autocomplete_tasks = [
+                        self._get_autocomplete_with_semaphore(v, semaphore) for v in current_variations
+                    ]
+
+                    # Crear tasks para YouTube suggestions (limited to avoid rate limits)
+                    youtube_tasks = [
+                        self._get_youtube_with_semaphore(v, semaphore)
+                        for v in current_variations[:5]  # Limitar para evitar rate limits
+                    ]
+
+                    # Task para related searches
+                    related_task = self._get_related_with_semaphore(current_seed, semaphore)
+
                     # Gather all autocomplete results
                     autocomplete_results = await asyncio.gather(
                         *autocomplete_tasks, return_exceptions=True
@@ -606,7 +606,9 @@ class GoogleScraper:
                     return autocomplete_results, youtube_results, related_results
 
                 # Set overall timeout for all operations
-                results_tuple = await asyncio.wait_for(gather_all_results(), timeout=60.0)
+                results_tuple = await asyncio.wait_for(
+                    gather_all_results(variations, seed, request_semaphore), timeout=60.0
+                )
                 autocomplete_results, youtube_results, related_results = results_tuple
 
                 # Flatten and combine results
