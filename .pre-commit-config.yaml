@@ -1,0 +1,81 @@
+# Pre-commit configuration for Keyword Finder
+# Ensures code quality before commits
+
+repos:
+  # Python formatting and linting
+  - repo: https://github.com/psf/black
+    rev: 23.9.1
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.5.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports]
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml]
+        exclude: ^(tests/|scripts/|docs/)
+
+  # YAML validation
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # Commit message validation
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v2.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [] # Use defaults: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test
+
+# Configuration for specific file types
+exclude: |
+  (?x)(
+    # Exclude generated files
+    ^exports/.*|
+    ^logs/.*|
+    ^cache/.*|
+    # Exclude third-party code
+    ^venv/.*|
+    ^\.venv/.*|
+    # Exclude build artifacts
+    ^build/.*|
+    ^dist/.*|
+    \.egg-info/.*|
+    # Exclude IDE files
+    ^\.vscode/.*|
+    ^\.idea/.*|
+    # Exclude OS files
+    ^\.DS_Store$|
+    ^Thumbs\.db$
+  )

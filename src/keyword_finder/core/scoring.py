@@ -381,7 +381,7 @@ class AdvancedKeywordScorer:
         )
 
         # Convertir a escala 0-100
-        return round(score * 100, 2)
+        return float(round(score * 100, 2))
 
     def _apply_guardrails(self, keywords_batch: list[dict]) -> list[dict]:
         """Aplica guardrails para evitar falsos positivos"""
@@ -465,12 +465,14 @@ class AdvancedKeywordScorer:
         }
 
         # Calcular mejoras
+        transactional = cast(dict[str, float], metrics["transactional_intent"])
+        geo = cast(dict[str, float], metrics["geo_targeting"])
+        variance = cast(dict[str, float], metrics["score_variance"])
+
         metrics["improvements"] = {
-            "transactional_lift": metrics["transactional_intent"]["new"]
-            - metrics["transactional_intent"]["old"],
-            "geo_lift": metrics["geo_targeting"]["new"] - metrics["geo_targeting"]["old"],
-            "variance_reduction": metrics["score_variance"]["old"]
-            - metrics["score_variance"]["new"],
+            "transactional_lift": transactional["new"] - transactional["old"],
+            "geo_lift": geo["new"] - geo["old"],
+            "variance_reduction": variance["old"] - variance["new"],
             "meets_targets": self._check_targets_met(metrics),
         }
 
@@ -588,7 +590,8 @@ class KeywordScorer(AdvancedKeywordScorer):
             results = self.calculate_advanced_score(keyword_data)
 
             if results:
-                return results[0].get("advanced_score", 0.0)
+                score = results[0].get("advanced_score", 0.0)
+                return float(score) if isinstance(score, int | float) else 0.0
             else:
                 return 0.0
 
@@ -747,7 +750,9 @@ class KeywordScorer(AdvancedKeywordScorer):
         scored.sort(key=lambda x: x.get("score", 0), reverse=True)
         return scored
 
-    def create_heuristic_clusters(self, keywords: list[dict]) -> dict[str, list[dict]]:
+    def create_heuristic_clusters(
+        self, keywords: list[dict]
+    ) -> dict[str, list[dict]]:  # noqa: C901
         """Clustering simple basado en patrones semánticos frecuentes.
 
         Clusters: cursos, servicios, precios, gratis, geo, online, guia, herramientas, otros

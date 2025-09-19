@@ -4,11 +4,14 @@ import random
 import re
 import unicodedata
 from difflib import SequenceMatcher
+from typing import Any
 from urllib.parse import quote_plus
 
 import brotli
 import httpx
 from selectolax.parser import HTMLParser
+
+from ..platform.rate_limiter import RateLimitConfig, RateLimiter, ThrottledSession
 
 
 class GeoConfig:
@@ -62,11 +65,29 @@ class GoogleScraper:
     """Scraper para obtener keywords de Google Autocomplete y Related Searches"""
 
     def __init__(
-        self, delay_range: tuple = (1, 3), max_retries: int = 3, geo_config: GeoConfig | None = None
+        self,
+        delay_range: tuple = (1, 3),
+        max_retries: int = 3,
+        geo_config: GeoConfig | None = None,
+        rate_limit_config: RateLimitConfig | None = None,
     ):
         self.delay_range = delay_range
         self.max_retries = max_retries
         self.geo_config = geo_config or GeoConfig("PE")  # Default to Peru
+
+        # Initialize rate limiter
+        self.rate_limiter: RateLimiter | None
+        if rate_limit_config:
+            self.rate_limiter = RateLimiter(rate_limit_config)
+            # Override delay_range with rate limiter config
+            self.delay_range = rate_limit_config.get_delay_range()
+            self.max_retries = rate_limit_config.retry_limit
+            logging.info(
+                f"Rate limiter enabled: {rate_limit_config.min_delay}-{rate_limit_config.max_delay}s delays, max {rate_limit_config.max_concurrent} concurrent"
+            )
+        else:
+            self.rate_limiter = None
+            logging.info("Rate limiter disabled, using basic delays")
 
         # User agents para rotar
         self.user_agents = [
@@ -77,9 +98,12 @@ class GoogleScraper:
         ]
 
         # Configurar sesión HTTP
+        timeout = rate_limit_config.request_timeout if rate_limit_config else 30.0
+        max_connections = rate_limit_config.max_concurrent if rate_limit_config else 10
+
         self.session = httpx.AsyncClient(
-            timeout=30.0,
-            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+            timeout=timeout,
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=max_connections),
             follow_redirects=True,
             headers={"Accept-Encoding": "gzip, deflate, br"},  # Enable brotli
             http2=True,  # Enable HTTP/2 support
@@ -92,7 +116,7 @@ class GoogleScraper:
         geo_params = self.geo_config.get_query_params()
 
         headers = {
-            "User-Agent": random.choice(self.user_agents),
+            "User-Agent": random.choice(self.user_agents),  # noqa: S311
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "Accept-Language": f"{geo_params['hl']},es;q=0.9,en;q=0.8",
             "Accept-Encoding": "gzip, deflate, br",  # Enable brotli compression
@@ -110,15 +134,21 @@ class GoogleScraper:
         return headers
 
     async def _make_request(self, url: str) -> str:
-        """Hace una request HTTP con reintentos y rate limiting"""
+        """Hace una request HTTP con reintentos, rate limiting y manejo de cancelaciones"""
         for attempt in range(self.max_retries):
             try:
-                # Rate limiting
-                await asyncio.sleep(random.uniform(*self.delay_range))
-
-                headers = self._get_random_headers()
-                response = await self.session.get(url, headers=headers)
-                response.raise_for_status()
+                if self.rate_limiter:
+                    # Use advanced rate limiter
+                    async with ThrottledSession(self.session, self.rate_limiter) as throttled:
+                        headers = self._get_random_headers()
+                        response = await throttled.get(url, headers=headers)
+                        response.raise_for_status()
+                else:
+                    # Use basic rate limiting
+                    await asyncio.sleep(random.uniform(*self.delay_range))  # noqa: S311
+                    headers = self._get_random_headers()
+                    response = await self.session.get(url, headers=headers)
+                    response.raise_for_status()
 
                 # Manejar decompresión (ahora httpx maneja brotli automáticamente)
                 content = response.content
@@ -135,10 +165,14 @@ class GoogleScraper:
                         pass
 
                 # Decodificar texto
-                text = content.decode("utf-8", errors="ignore")
+                text = str(content.decode("utf-8", errors="ignore"))
 
                 logging.debug(f"Request successful to {url}")
                 return text
+
+            except asyncio.CancelledError:
+                logging.info(f"Request cancelled for {url}")
+                raise  # Re-raise CancelledError to propagate cancellation
 
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 429:  # Rate limited
@@ -498,8 +532,12 @@ class GoogleScraper:
 
         return True
 
-    async def expand_keywords(
-        self, seed_keywords: list[str], max_concurrent: int = 3
+    async def expand_keywords(  # noqa: C901
+        self,
+        seed_keywords: list[str],
+        max_concurrent: int = 3,
+        include_alphabet_soup: bool = False,
+        soup_chars: str | None = None,
     ) -> dict[str, list[str]]:
         """Expande una lista de keywords semilla usando autocomplete y related searches con paralelismo optimizado"""
         results = {}
@@ -529,6 +567,13 @@ class GoogleScraper:
                 }
             )
 
+            # Alphabet soup (opcional): agrega sufijos "a-z" y "0-9" para ampliar sugerencias
+            if include_alphabet_soup:
+                chars = soup_chars or "abcdefghijklmnopqrstuvwxyz0123456789"
+                addl = [f"{seed} {ch}" for ch in chars]
+                # Limitar para evitar explosión
+                variations.extend(addl[: max(0, 36)])
+
             # Crear tasks para autocomplete suggestions (parallelized)
             autocomplete_tasks = [
                 self._get_autocomplete_with_semaphore(v, request_semaphore) for v in variations
@@ -543,18 +588,26 @@ class GoogleScraper:
             # Task para related searches
             related_task = self._get_related_with_semaphore(seed, request_semaphore)
 
-            # Ejecutar todas las tasks en paralelo
+            # Ejecutar todas las tasks en paralelo con timeout general
             try:
-                # Gather all autocomplete results
-                autocomplete_results = await asyncio.gather(
-                    *autocomplete_tasks, return_exceptions=True
-                )
+                # Use asyncio.wait_for with overall timeout for the entire operation
+                async def gather_all_results():
+                    # Gather all autocomplete results
+                    autocomplete_results = await asyncio.gather(
+                        *autocomplete_tasks, return_exceptions=True
+                    )
 
-                # Gather YouTube results
-                youtube_results = await asyncio.gather(*youtube_tasks, return_exceptions=True)
+                    # Gather YouTube results
+                    youtube_results = await asyncio.gather(*youtube_tasks, return_exceptions=True)
 
-                # Get related searches
-                related_results = await related_task
+                    # Get related searches
+                    related_results = await related_task
+
+                    return autocomplete_results, youtube_results, related_results
+
+                # Set overall timeout for all operations
+                results_tuple = await asyncio.wait_for(gather_all_results(), timeout=60.0)
+                autocomplete_results, youtube_results, related_results = results_tuple
 
                 # Flatten and combine results
                 all_keywords = []
@@ -563,19 +616,21 @@ class GoogleScraper:
                 for result in autocomplete_results:
                     if isinstance(result, list):
                         all_keywords.extend(result)
-                    elif isinstance(result, Exception):
-                        logging.warning(f"Autocomplete task failed: {result}")
+                    elif isinstance(result, (Exception, asyncio.CancelledError)):
+                        logging.debug(f"Autocomplete task result: {type(result).__name__}")
 
                 # Process YouTube results
                 for result in youtube_results:
                     if isinstance(result, list):
                         all_keywords.extend(result)
-                    elif isinstance(result, Exception):
-                        logging.warning(f"YouTube task failed: {result}")
+                    elif isinstance(result, (Exception, asyncio.CancelledError)):
+                        logging.debug(f"YouTube task result: {type(result).__name__}")
 
                 # Add related searches
                 if isinstance(related_results, list):
                     all_keywords.extend(related_results)
+                elif isinstance(related_results, (Exception, asyncio.CancelledError)):
+                    logging.debug(f"Related search result: {type(related_results).__name__}")
 
                 # Remove duplicates and store
                 unique_keywords = list(set(all_keywords))
@@ -585,6 +640,16 @@ class GoogleScraper:
                     f"Expanded '{seed}' into {len(unique_keywords)} keywords using parallel processing"
                 )
 
+            except TimeoutError:
+                logging.warning(
+                    f"Timeout during parallel expansion for '{seed}', falling back to sequential"
+                )
+                results[seed] = await self._expand_keywords_sequential(seed, variations)
+            except asyncio.CancelledError:
+                logging.info(
+                    f"Parallel expansion cancelled for '{seed}', falling back to sequential"
+                )
+                results[seed] = await self._expand_keywords_sequential(seed, variations)
             except Exception as e:
                 logging.error(f"Error in parallel expansion for '{seed}': {e}")
                 # Fallback to sequential processing
@@ -596,34 +661,54 @@ class GoogleScraper:
         self, variation: str, semaphore: asyncio.Semaphore
     ) -> list[str]:
         """Get autocomplete suggestions with semaphore rate limiting"""
-        async with semaphore:
-            try:
-                return await self.get_autocomplete_suggestions(variation)
-            except Exception as e:
-                logging.warning(f"Failed to get autocomplete for '{variation}': {e}")
-                return []
+        try:
+            async with semaphore:
+                return await asyncio.wait_for(
+                    self.get_autocomplete_suggestions(variation), timeout=15.0
+                )
+        except TimeoutError:
+            logging.warning(f"Timeout getting autocomplete for '{variation}'")
+            return []
+        except asyncio.CancelledError:
+            logging.info(f"Autocomplete task cancelled for '{variation}'")
+            return []
+        except Exception as e:
+            logging.warning(f"Failed to get autocomplete for '{variation}': {e}")
+            return []
 
     async def _get_youtube_with_semaphore(
         self, variation: str, semaphore: asyncio.Semaphore
     ) -> list[str]:
         """Get YouTube suggestions with semaphore rate limiting"""
-        async with semaphore:
-            try:
-                return await self.get_youtube_suggestions(variation)
-            except Exception as e:
-                logging.warning(f"Failed to get YouTube suggestions for '{variation}': {e}")
-                return []
+        try:
+            async with semaphore:
+                return await asyncio.wait_for(self.get_youtube_suggestions(variation), timeout=15.0)
+        except TimeoutError:
+            logging.warning(f"Timeout getting YouTube suggestions for '{variation}'")
+            return []
+        except asyncio.CancelledError:
+            logging.info(f"YouTube task cancelled for '{variation}'")
+            return []
+        except Exception as e:
+            logging.warning(f"Failed to get YouTube suggestions for '{variation}': {e}")
+            return []
 
     async def _get_related_with_semaphore(
         self, seed: str, semaphore: asyncio.Semaphore
     ) -> list[str]:
         """Get related searches with semaphore rate limiting"""
-        async with semaphore:
-            try:
-                return await self.get_related_searches(seed)
-            except Exception as e:
-                logging.warning(f"Failed to get related searches for '{seed}': {e}")
-                return []
+        try:
+            async with semaphore:
+                return await asyncio.wait_for(self.get_related_searches(seed), timeout=15.0)
+        except TimeoutError:
+            logging.warning(f"Timeout getting related searches for '{seed}'")
+            return []
+        except asyncio.CancelledError:
+            logging.info(f"Related search task cancelled for '{seed}'")
+            return []
+        except Exception as e:
+            logging.warning(f"Failed to get related searches for '{seed}': {e}")
+            return []
 
     async def _expand_keywords_sequential(self, seed: str, variations: list[str]) -> list[str]:
         """Fallback sequential expansion when parallel fails"""
@@ -650,22 +735,66 @@ class GoogleScraper:
     async def close(self):
         """Cierra la sesión HTTP"""
         await self.session.aclose()
+
+        # Log rate limiter stats if available
+        if self.rate_limiter:
+            stats = self.rate_limiter.get_stats()
+            logging.info(f"Rate limiter stats: {stats}")
+
         logging.info("GoogleScraper session closed")
+
+    def get_rate_limiter_stats(self) -> dict[str, Any] | None:
+        """Get rate limiter statistics if available"""
+        if self.rate_limiter:
+            return self.rate_limiter.get_stats()
+        return None
 
 
 # Factory functions for easy initialization
-def create_scraper(country: str = "PE", max_concurrent: int = 3) -> GoogleScraper:
-    """Factory function to create GoogleScraper with geo-targeting
+def create_scraper(
+    country: str = "PE", max_concurrent: int = 3, rate_limit_config: RateLimitConfig | None = None
+) -> GoogleScraper:
+    """Factory function to create GoogleScraper with geo-targeting and rate limiting
 
     Args:
         country: Country code (PE, ES, MX, AR, CO, CL, US, GLOBAL)
-        max_concurrent: Maximum concurrent requests
+        max_concurrent: Maximum concurrent requests (overridden by rate_limit_config if provided)
+        rate_limit_config: Rate limiting configuration
 
     Returns:
         Configured GoogleScraper instance
     """
     geo_config = GeoConfig(country)
-    return GoogleScraper(geo_config=geo_config)
+
+    # If no rate limit config provided, create a basic one with the max_concurrent parameter
+    if rate_limit_config is None and max_concurrent != 3:
+        rate_limit_config = RateLimitConfig(max_concurrent=max_concurrent)
+
+    return GoogleScraper(geo_config=geo_config, rate_limit_config=rate_limit_config)
+
+
+def create_validation_scraper(
+    validation_config: dict[str, Any], country: str = "PE"
+) -> GoogleScraper:
+    """Create a scraper configured for validation with minimal API usage.
+
+    Args:
+        validation_config: Configuration from validation.yaml
+        country: Country code for geo-targeting
+
+    Returns:
+        GoogleScraper configured for validation
+    """
+    from ..platform.rate_limiter import create_rate_limited_scraper_config
+
+    geo_config = GeoConfig(country)
+    rate_config = create_rate_limited_scraper_config(validation_config)
+
+    logging.info(
+        f"Creating validation scraper with minimal config: {rate_config.min_delay}-{rate_config.max_delay}s delays"
+    )
+
+    return GoogleScraper(geo_config=geo_config, rate_limit_config=rate_config)
 
 
 class CompetitorScraper:

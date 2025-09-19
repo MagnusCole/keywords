@@ -5,7 +5,7 @@ import pandas as pd
 from pytrends.request import TrendReq
 
 
-class TrendsAnalyzer:
+class GoogleTrendsAnalyzer:
     """Analizador de Google Trends para obtener datos de volumen y tendencias"""
 
     def __init__(self, hl: str = "es", tz: int = 360):
@@ -20,7 +20,7 @@ class TrendsAnalyzer:
         self.tz = tz
         self.pytrends = None
         self._init_pytrends()
-        logging.info("TrendsAnalyzer initialized")
+        logging.info("GoogleTrendsAnalyzer initialized")
 
     def _init_pytrends(self) -> None:
         """Inicializa la conexión con PyTrends"""
@@ -105,7 +105,7 @@ class TrendsAnalyzer:
             # Retornar datos vacíos para cada keyword
             return {kw: self._empty_trend_data() for kw in keywords}
 
-    def _analyze_keyword_trends(
+    def _analyze_keyword_trends(  # noqa: C901
         self,
         keyword: str,
         interest_data: pd.DataFrame,

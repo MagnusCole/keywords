@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from src.database import Keyword, KeywordDatabase
-from src.exporters import KeywordExporter
+from src.keyword_finder.core.database import Keyword, KeywordDatabase
+from src.keyword_finder.core.exporters import KeywordExporter
 
 
 def test_db_insert_and_csv_export(tmp_path):
