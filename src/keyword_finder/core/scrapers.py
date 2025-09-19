@@ -580,7 +580,8 @@ class GoogleScraper:
                 async def gather_all_results(current_variations, current_seed, semaphore):
                     # Crear tasks para autocomplete suggestions (parallelized)
                     autocomplete_tasks = [
-                        self._get_autocomplete_with_semaphore(v, semaphore) for v in current_variations
+                        self._get_autocomplete_with_semaphore(v, semaphore)
+                        for v in current_variations
                     ]
 
                     # Crear tasks para YouTube suggestions (limited to avoid rate limits)
@@ -770,7 +771,9 @@ def create_scraper(
 
     # If no rate limit config provided, create a basic one with the max_concurrent parameter
     if rate_limit_config is None and max_concurrent != 3:
-        rate_limit_config = RateLimitConfig(max_concurrent=max_concurrent)
+        from ..platform.rate_limiter import create_rate_limited_scraper_config
+
+        rate_limit_config = create_rate_limited_scraper_config(max_concurrent=max_concurrent)
 
     return GoogleScraper(geo_config=geo_config, rate_limit_config=rate_limit_config)
 
@@ -790,7 +793,23 @@ def create_validation_scraper(
     from ..platform.rate_limiter import create_rate_limited_scraper_config
 
     geo_config = GeoConfig(country)
-    rate_config = create_rate_limited_scraper_config(validation_config)
+
+    # Extract rate limiting parameters from validation config
+    requests_per_minute = validation_config.get("requests_per_minute", 10)
+    min_delay = validation_config.get("min_delay", 2.0)
+    max_delay = validation_config.get("max_delay", 5.0)
+    max_concurrent = validation_config.get("max_concurrent", 2)
+    retry_limit = validation_config.get("retry_limit", 2)
+    request_timeout = validation_config.get("request_timeout", 20.0)
+
+    rate_config = create_rate_limited_scraper_config(
+        requests_per_minute=requests_per_minute,
+        min_delay=min_delay,
+        max_delay=max_delay,
+        max_concurrent=max_concurrent,
+        retry_limit=retry_limit,
+        request_timeout=request_timeout,
+    )
 
     logging.info(
         f"Creating validation scraper with minimal config: {rate_config.min_delay}-{rate_config.max_delay}s delays"

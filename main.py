@@ -10,6 +10,11 @@ import logging
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
+
+# Agregar el directorio src al path para importar módulos
+src_path = Path(__file__).parent / "src"
+sys.path.insert(0, str(src_path))
 
 from reliability_report import generate_reliability_report
 

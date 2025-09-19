@@ -1,5 +1,6 @@
+import asyncio
 import logging
-import time
+from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 from pytrends.request import TrendReq
@@ -25,17 +26,17 @@ class GoogleTrendsAnalyzer:
     def _init_pytrends(self) -> None:
         """Inicializa la conexión con PyTrends"""
         try:
-            self.pytrends = TrendReq(hl=self.hl, tz=self.tz, timeout=20)
+            self.pytrends = TrendReq(hl=self.hl, tz=self.tz, timeout=10)  # Reducido de 20 a 10
             logging.info("PyTrends connection established")
         except Exception as e:
             logging.error(f"Failed to initialize PyTrends: {e}")
             self.pytrends = None
 
-    def get_trend_data(
+    async def get_trend_data_async(
         self, keywords: list[str], timeframe: str = "today 12-m", geo: str = "ES"
     ) -> dict[str, dict]:
         """
-        Obtiene datos de trends para una lista de keywords
+        Obtiene datos de trends para una lista de keywords usando procesamiento paralelo
 
         Args:
             keywords: Lista de keywords a analizar
@@ -49,20 +50,75 @@ class GoogleTrendsAnalyzer:
             logging.error("PyTrends not initialized")
             return {}
 
-        results = {}
-
         # PyTrends tiene límite de 5 keywords por request
         batch_size = 5
-        for i in range(0, len(keywords), batch_size):
-            batch = keywords[i : i + batch_size]
-            batch_results = self._process_keyword_batch(batch, timeframe, geo)
-            results.update(batch_results)
+        batches = [keywords[i : i + batch_size] for i in range(0, len(keywords), batch_size)]
 
-            # Rate limiting entre batches
-            if i + batch_size < len(keywords):
-                time.sleep(2)
+        # Procesar batches en paralelo con control de concurrencia
+        semaphore = asyncio.Semaphore(2)  # Máximo 2 requests concurrentes
+        results = {}
+
+        async def process_batch_with_semaphore(batch: list[str]) -> dict[str, dict]:
+            async with semaphore:
+                return await self._process_keyword_batch_async(batch, timeframe, geo)
+
+        # Crear tareas para todos los batches
+        tasks = [process_batch_with_semaphore(batch) for batch in batches]
+
+        # Ejecutar todas las tareas
+        batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Procesar resultados
+        for i, result in enumerate(batch_results):
+            if isinstance(result, Exception):
+                logging.error(f"Error processing batch {i}: {result}")
+                # Retornar datos vacíos para este batch
+                batch_keywords = batches[i]
+                for kw in batch_keywords:
+                    results[kw] = self._empty_trend_data()
+            elif isinstance(result, dict):
+                results.update(result)
 
         return results
+
+    def get_trend_data(
+        self, keywords: list[str], timeframe: str = "today 12-m", geo: str = "ES"
+    ) -> dict[str, dict]:
+        """
+        Obtiene datos de trends para una lista de keywords (wrapper síncrono)
+
+        Args:
+            keywords: Lista de keywords a analizar
+            timeframe: Periodo de tiempo ('today 12-m', 'today 3-m', etc.)
+            geo: Código de país ('ES', 'US', etc.)
+
+        Returns:
+            Dict con datos de cada keyword
+        """
+        # Ejecutar la versión async en un event loop
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Si ya hay un loop corriendo, usar ThreadPoolExecutor
+                with ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run, self.get_trend_data_async(keywords, timeframe, geo)
+                    )
+                    return future.result()
+            else:
+                return loop.run_until_complete(self.get_trend_data_async(keywords, timeframe, geo))
+        except RuntimeError:
+            # No hay loop, crear uno nuevo
+            return asyncio.run(self.get_trend_data_async(keywords, timeframe, geo))
+
+    async def _process_keyword_batch_async(
+        self, keywords: list[str], timeframe: str, geo: str
+    ) -> dict[str, dict]:
+        """Procesa un batch de keywords de manera asíncrona"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, self._process_keyword_batch, keywords, timeframe, geo
+        )
 
     def _process_keyword_batch(
         self, keywords: list[str], timeframe: str, geo: str
@@ -78,24 +134,15 @@ class GoogleTrendsAnalyzer:
             # Obtener datos de interés a lo largo del tiempo
             interest_over_time = self.pytrends.interest_over_time()
 
-            # Obtener datos regionales si están disponibles
-            try:
-                regional_data = self.pytrends.interest_by_region()
-            except Exception:
-                regional_data = pd.DataFrame()
-
-            # Obtener related queries
-            try:
-                related_queries = self.pytrends.related_queries()
-            except Exception:
-                related_queries = {}
-
-            # Procesar resultados para cada keyword
+            # Procesar resultados para cada keyword de manera más eficiente
             results = {}
             for keyword in keywords:
-                results[keyword] = self._analyze_keyword_trends(
-                    keyword, interest_over_time, regional_data, related_queries
-                )
+                if keyword in interest_over_time.columns:
+                    results[keyword] = self._analyze_keyword_trends_fast(
+                        keyword, interest_over_time
+                    )
+                else:
+                    results[keyword] = self._empty_trend_data()
 
             logging.info(f"Processed trends for {len(keywords)} keywords")
             return results
@@ -104,6 +151,45 @@ class GoogleTrendsAnalyzer:
             logging.error(f"Error processing keyword batch {keywords}: {e}")
             # Retornar datos vacíos para cada keyword
             return {kw: self._empty_trend_data() for kw in keywords}
+
+    def _analyze_keyword_trends_fast(self, keyword: str, interest_data: pd.DataFrame) -> dict:
+        """Analiza los datos de trends de manera optimizada para velocidad"""
+        try:
+            trend_data = {
+                "keyword": keyword,
+                "trend_score": 0.0,
+                "volume_estimate": 0,
+                "growth_rate": 0.0,
+                "seasonality": "stable",
+                "regional_interest": {},
+                "related_keywords": [],
+                "data_source": "trends",
+                "data_quality": "high",
+            }
+
+            if keyword in interest_data.columns:
+                values = interest_data[keyword].dropna()
+                if len(values) > 0 and values.sum() > 0:
+                    # Cálculos simplificados para velocidad
+                    trend_data["trend_score"] = float(values.mean())
+                    trend_data["volume_estimate"] = int(values.max() * 100)
+
+                    # Growth rate simplificado
+                    if len(values) >= 2:
+                        try:
+                            recent = values.iloc[-1] if len(values) >= 1 else values.mean()
+                            older = values.iloc[0] if len(values) >= 1 else values.mean()
+                            if older > 0:
+                                growth_rate = ((recent - older) / older) * 100
+                                trend_data["growth_rate"] = round(float(growth_rate), 2)
+                        except (ZeroDivisionError, TypeError):
+                            trend_data["growth_rate"] = 0.0
+
+            return trend_data
+
+        except Exception as e:
+            logging.warning(f"Error in fast analysis for {keyword}: {e}")
+            return self._empty_trend_data()
 
     def _analyze_keyword_trends(  # noqa: C901
         self,

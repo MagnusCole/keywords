@@ -1,6 +1,7 @@
 """
 Logging utilities for the keyword finder application.
 """
+
 import logging
 from pathlib import Path
 from typing import Any
@@ -56,7 +57,7 @@ def setup_enhanced_logging(
 
     # Create formatter
     formatter = logging.Formatter(
-        f'%(asctime)s [{service_name}] [{environment}] [{component}] [{run_id}] %(levelname)s %(name)s - %(message)s'
+        f"%(asctime)s [{service_name}] [{environment}] [{component}] [{run_id}] %(levelname)s %(name)s - %(message)s"
     )
 
     # Console handler
@@ -90,7 +91,9 @@ def set_log_context(run_id: str, component: str, operation: str) -> None:
     # In a real implementation, this might set thread-local variables
     # or use logging adapters
     logger = logging.getLogger(__name__)
-    logger.info(f"Setting log context: run_id={run_id}, component={component}, operation={operation}")
+    logger.info(
+        f"Setting log context: run_id={run_id}, component={component}, operation={operation}"
+    )
 
 
 def load_config(config_path: str, overrides: dict[str, Any] | None = None) -> Any:
@@ -114,7 +117,7 @@ def load_config(config_path: str, overrides: dict[str, Any] | None = None) -> An
         if not config_file.exists():
             raise ConfigError(f"Configuration file not found: {config_path}")
 
-        with open(config_file, encoding='utf-8') as f:
+        with open(config_file, encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         if overrides:

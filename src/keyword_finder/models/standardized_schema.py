@@ -43,7 +43,8 @@ class StandardizedSchema:
     def _create_tables(self, conn: sqlite3.Connection) -> None:
         """Create standardized tables."""
         # Keywords table with full schema
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS keywords (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 keyword TEXT NOT NULL,
@@ -70,10 +71,12 @@ class StandardizedSchema:
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(keyword, geo, language)
             )
-        """)
+        """
+        )
 
         # Runs table for execution tracking
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS runs (
                 run_id TEXT PRIMARY KEY,
                 started_at TEXT NOT NULL,
@@ -89,20 +92,22 @@ class StandardizedSchema:
                 competition_weight REAL,
                 duration_ms INTEGER
             )
-        """)
+        """
+        )
 
         # Schema version tracking
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS schema_version (
                 version TEXT PRIMARY KEY,
                 applied_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # Record schema version
         conn.execute(
-            "INSERT OR IGNORE INTO schema_version (version) VALUES (?)",
-            (self.SCHEMA_VERSION,)
+            "INSERT OR IGNORE INTO schema_version (version) VALUES (?)", (self.SCHEMA_VERSION,)
         )
 
     def _create_indexes(self, conn: sqlite3.Connection) -> None:
@@ -133,6 +138,6 @@ def get_schema_info() -> dict[str, Any]:
             "Foreign key relationships",
             "Optimized indexes",
             "Schema versioning",
-            "Enhanced metadata tracking"
-        ]
+            "Enhanced metadata tracking",
+        ],
     }

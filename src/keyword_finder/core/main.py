@@ -29,8 +29,7 @@ from .trends import GoogleTrendsAnalyzer
 
 # Setup basic logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 try:
@@ -218,9 +217,7 @@ class KeywordFinder:
         # Raw keywords status
         if target_raw > 0:
             status = "✅" if total_raw >= target_raw else "⚠️"
-            logger.info(
-                f"Raw keywords: {status} {total_raw:,} (target: {target_raw:,})"
-            )
+            logger.info(f"Raw keywords: {status} {total_raw:,} (target: {target_raw:,})")
         else:
             logger.info(f"Raw keywords: {total_raw:,} (no target)")
 
@@ -240,18 +237,14 @@ class KeywordFinder:
             status = (
                 "✅" if abs(cluster_count - target_clusters) <= 2 else "⚠️"
             )  # 2 cluster tolerance
-            logger.info(
-                f"Clusters: {status} {cluster_count} (target: {target_clusters})"
-            )
+            logger.info(f"Clusters: {status} {cluster_count} (target: {target_clusters})")
         else:
             logger.info(f"Clusters: {cluster_count} (no target)")
 
         # Performance metrics
         if total_raw > 0:
             retention_rate = (filtered_count / total_raw) * 100
-            logger.info(
-                f"Retention rate: {retention_rate:.1f}% ({filtered_count:,}/{total_raw:,})"
-            )
+            logger.info(f"Retention rate: {retention_rate:.1f}% ({filtered_count:,}/{total_raw:,})")
 
         if cluster_count > 0 and filtered_count > 0:
             avg_per_cluster = filtered_count / cluster_count
@@ -451,8 +444,8 @@ class KeywordFinder:
             logging.info("Phase 3: Enriching with Google Trends data")
             unique_keywords = list(set([kw["keyword"] for kw in all_keywords]))
 
-            # Procesar en batches para evitar límites de API
-            batch_size = 20
+            # Procesar en batches más grandes ya que ahora es paralelo
+            batch_size = 50  # Aumentado de 20 a 50
             for i in range(0, len(unique_keywords), batch_size):
                 batch = unique_keywords[i : i + batch_size]
                 trends_data = self.trends.get_trend_data(batch)
