@@ -514,18 +514,18 @@ Ejemplos de uso:
                             all_seeds.append(s)
             except (OSError, FileNotFoundError) as e:
                 logging.error("No se pudieron leer seeds desde archivo: %s", e)
-                print(f"❌ Error leyendo --seeds-file: {e}")
+                print(f"ERROR: Error leyendo --seeds-file: {e}")
                 return
 
         # Deduplicar y validar
         all_seeds = sorted({s.strip() for s in all_seeds if s and len(s.strip()) >= 2})
         if not all_seeds:
-            print("❌ Error: Debes proporcionar keywords semilla con --seeds o --seeds-file")
+            print("ERROR: Debes proporcionar keywords semilla con --seeds o --seeds-file")
             parser.print_help()
             return
 
         print(
-            f"🚀 Iniciando búsqueda de keywords para: {', '.join(all_seeds[:10])}{' ...' if len(all_seeds) > 10 else ''}"
+            f"Iniciando búsqueda de keywords para: {', '.join(all_seeds[:10])}{' ...' if len(all_seeds) > 10 else ''}"
         )
 
         # Ejecutar búsqueda de keywords
@@ -537,7 +537,7 @@ Ejemplos de uso:
         )
 
         if not keywords:
-            print("❌ No se encontraron keywords.")
+            print("ERROR: No se encontraron keywords.")
             return
 
         # Mostrar resultados
@@ -592,7 +592,7 @@ Ejemplos de uso:
         print("\n🛑 Proceso interrumpido por el usuario.")
     except Exception as e:
         logging.error("Error en ejecución principal: %s", e)
-        print(f"❌ Error: {e}")
+        print(f"ERROR: {e}")
     finally:
         await finder.cleanup()
 
