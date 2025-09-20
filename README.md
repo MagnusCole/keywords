@@ -28,8 +28,8 @@
 ### Setup Automático
 ```bash
 # Clonar repositorio
-git clone https://github.com/username/keyword-finder.git
-cd keyword-finder
+git clone https://github.com/MagnusCole/keywords.git
+cd keywords
 
 # Crear entorno virtual
 python -m venv venv
