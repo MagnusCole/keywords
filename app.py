@@ -1,4 +1,5 @@
 
+import asyncio
 import os
 import sys
 import tempfile
@@ -10,7 +11,6 @@ import streamlit as st
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent / "src"))
 
-# Import our modules
 # Import our modules
 from ai_assistant import create_ai_assistant, display_ai_response
 from keyword_finder.core.main import KeywordFinder
@@ -145,7 +145,8 @@ def main():
             col_a, col_b = st.columns(2)
             with col_a:
                 geo = st.selectbox("País", ["PE", "MX", "CO", "CL", "AR"], index=0, key="geo_select")
-                language = st.selectbox("Idioma", ["es", "en"], index=0, key="language_select")
+                # Language selection (stored but not used in current implementation)
+                st.selectbox("Idioma", ["es", "en"], index=0, key="language_select")
 
             with col_b:
                 max_keywords = st.slider("Máximo keywords a analizar", 50, 500, 200, key="max_keywords_slider")
@@ -190,20 +191,42 @@ def main():
 
                         # Run analysis
                         try:
-                            results = finder.run_analysis(
-                                seeds=keywords[:max_keywords],
-                                geo=geo,
-                                language=language,
-                                output_dir=temp_dir
-                            )
+                            # Use asyncio to run the async find_keywords method
+                            async def run_analysis():
+                                return await finder.find_keywords(
+                                    seed_keywords=keywords[:max_keywords],
+                                    include_trends=True,
+                                    include_competitors=None
+                                )
+
+                            # Execute async analysis
+                            scored_keywords, clusters, rejected_keywords = asyncio.run(run_analysis())
+
+                            # Prepare results for PDF generation
+                            results = {
+                                "keywords": scored_keywords,
+                                "clusters": clusters,
+                                "rejected_keywords": rejected_keywords
+                            }
 
                             # Generate PDF report
                             pdf_path = os.path.join(temp_dir, f"{niche_name.replace(' ', '_')}_report.pdf")
 
                             # Prepare data for template
+                            # Convert clusters dict to list format expected by template
+                            clusters_list = []
+                            if results.get("clusters") and isinstance(results["clusters"], dict):
+                                for cluster_name, cluster_keywords in results["clusters"].items():
+                                    if isinstance(cluster_keywords, list):
+                                        keywords_list = [kw.get("keyword", "") for kw in cluster_keywords[:10] if isinstance(kw, dict)]
+                                        clusters_list.append({
+                                            "name": cluster_name,
+                                            "keywords": keywords_list
+                                        })
+
                             data = {
-                                "keywords": results.get("keywords", []),
-                                "clusters": results.get("clusters", [])
+                                "keywords": results.get("keywords", []) if isinstance(results.get("keywords"), list) else [],
+                                "clusters": clusters_list
                             }
 
                             create_premium_report(data, pdf_path, niche_name)
