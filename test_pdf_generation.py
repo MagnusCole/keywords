@@ -4,16 +4,18 @@ Script para probar la generación completa de reportes desde la app
 """
 
 import os
-import sys
-from pathlib import Path
-import tempfile
 import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
 import pandas as pd
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
 from templates.report_template import create_premium_report
+
 
 def test_pdf_generation():
     """Prueba la generación completa de PDFs"""
