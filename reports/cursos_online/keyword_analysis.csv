@@ -1,0 +1,240 @@
+keyword,score,volume,competition,trend_score,intent,intent_prob,geo,language,cluster_id,cluster_label,source,category,volume_weight,trend_weight,competition_weight,run_id,export_timestamp
+agencia de marketing lima,0.0,10000,0.5,1.8867924528301887,transactional,0.85,,,5,marketing digital digital lima,google_agencia marketing Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+mejor agencia marketing digital espana,0.0,10000,0.5,1.8867924528301887,transactional,0.9,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing para negocios,0.0,10000,0.5,2.660377358490566,transactional,0.85,,,1,marketing de de contenidos,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+mejor agencia de marketing digital en colombia,0.0,10000,0.5,1.8867924528301887,transactional,0.9,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+agencia marketing para pymes,0.0,10000,0.5,1.8867924528301887,transactional,0.85,,,4,para pymes marketing para,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing para pymes,0.0,1100,0.5,0.41509433962264153,transactional,0.85,,,4,para pymes marketing para,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing,0.0,10000,0.5,16.90566037735849,commercial,0.6,,,1,marketing de de contenidos,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing,0.0,10000,0.5,16.90566037735849,commercial,0.6,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing,0.0,10000,0.5,16.90566037735849,commercial,0.6,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing,0.0,10000,0.5,16.90566037735849,commercial,0.6,,,1,marketing de de contenidos,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas email marketing,0.0,10000,0.5,1.9811320754716981,commercial,0.6,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es herramientas de marketing digital,0.0,10000,0.5,3.6226415094339623,commercial,0.65,,,0,marketing digital que es,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing en redes sociales,0.0,10000,0.5,1.8867924528301887,commercial,0.6,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+para que sirven las herramientas de marketing,0.0,10000,0.5,1.8867924528301887,commercial,0.6,,,1,marketing de de contenidos,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+para que sirven las herramientas de marketing,0.0,10000,0.5,1.8867924528301887,commercial,0.6,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+lima digital,0.0,10000,0.5,3.69811320754717,informational,0.3,,,5,marketing digital digital lima,google_publicidad digital Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+seo peru,0.0,10000,0.5,1.8867924528301887,informational,0.35,,,2,seo para seo peru,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing pymes herramientas,0.0,300,0.5,0.05660377358490566,commercial,0.6,,,4,para pymes marketing para,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing digital,0.0,800,0.5,0.2830188679245283,commercial,0.65,,,0,marketing digital que es,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing digital,0.0,800,0.5,0.2830188679245283,commercial,0.65,,,0,marketing digital que es,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing digital,0.0,800,0.5,0.2830188679245283,commercial,0.65,,,0,marketing digital que es,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing digital,0.0,800,0.5,0.2830188679245283,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing digital,0.0,800,0.5,0.2830188679245283,commercial,0.65,,,0,marketing digital que es,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing lima,0.0,500,0.5,0.09433962264150944,informational,0.3,,,5,marketing digital digital lima,google_agencia marketing Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing lima,0.0,500,0.5,0.09433962264150944,informational,0.3,,,5,marketing digital digital lima,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing lima,0.0,500,0.5,0.09433962264150944,informational,0.3,,,5,marketing digital digital lima,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es estrategia de contenido,0.0,10000,0.5,2.30188679245283,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos guia practica,0.0,10000,0.5,1.8867924528301887,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que significa marketing de contenidos,0.0,10000,0.5,1.8867924528301887,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital trabajo,0.0,10000,0.5,10.264150943396226,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing online business,0.0,10000,0.5,2.2830188679245285,commercial,0.6,,,0,marketing digital que es,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital utp,0.0,10000,0.5,1.8867924528301887,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+publicidad digital ejemplos,0.0,10000,0.5,1.8867924528301887,informational,0.3,,,0,marketing digital que es,google_publicidad digital Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital,0.0,10000,0.5,77.32075471698113,informational,0.35,,,0,marketing digital que es,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital,0.0,10000,0.5,77.32075471698113,informational,0.35,,,0,marketing digital que es,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing mix,0.0,10000,0.5,41.905660377358494,informational,0.3,,,1,marketing de de contenidos,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+agencia lima digital,0.0,0,0.5,0.0,transactional,0.85,,,5,marketing digital digital lima,google_agencia marketing Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing de contenidos segun autores,0.0,10000,0.5,1.8867924528301887,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+publicidad profesional,0.0,10000,0.5,2.5660377358490565,transactional,0.85,,,6,redes sociales sociales peru,google_publicidad digital Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing digital y redes sociales,0.0,6700,0.5,2.490566037735849,informational,0.35,,,3,redes sociales en redes,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+guia de marketing,0.0,2300,0.5,0.8679245283018868,informational,0.3,,,1,marketing de de contenidos,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+guia de marketing,0.0,2300,0.5,0.8679245283018868,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+guia de marketing,0.0,2300,0.5,0.8679245283018868,informational,0.3,,,1,marketing de de contenidos,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+automatizacion de marketing,0.0,5000,0.5,0.9433962264150944,informational,0.3,,,1,marketing de de contenidos,google_automatización negocios,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es contenido de valor en marketing,0.0,9800,0.5,1.849056603773585,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+agencia de marketing lima peru,0.0,0,0.5,0.0,transactional,0.85,,,5,marketing digital digital lima,google_agencia marketing Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+agencia de marketing faria lima,0.0,0,0.5,0.0,transactional,0.85,,,5,marketing digital digital lima,google_agencia marketing Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos y publicidad digital upc,0.0,9400,0.5,1.7735849056603774,informational,0.3,,,0,marketing digital que es,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing digital para el sistema moda,0.0,9000,0.5,1.6981132075471699,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing future,0.0,8900,0.5,4.09433962264151,informational,0.3,,,0,marketing digital que es,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital ejemplos,0.0,1200,0.5,0.37735849056603776,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+agencia marketing digital peru,0.0,0,0.5,0.0,transactional,0.9,,,5,marketing digital digital lima,google_agencia marketing Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+agencia marketing digital lima,0.0,0,0.5,0.0,transactional,0.9,,,5,marketing digital digital lima,google_agencia marketing Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+agencia de marketing peru,0.0,0,0.5,0.0,transactional,0.85,,,5,marketing digital digital lima,google_agencia marketing Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+agencia marketing digital peru,0.0,0,0.5,0.0,transactional,0.9,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+agencia marketing digital lima,0.0,0,0.5,0.0,transactional,0.9,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+lima marketing group eirl,0.0,0,0.5,0.0,informational,0.3,,,5,marketing digital digital lima,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+tendencias marketing digital pdf,0.0,6400,0.5,1.2075471698113207,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+digital marketing trends,0.0,100,0.5,0.018867924528301886,informational,0.3,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos en redes sociales,0.0,400,0.5,0.07547169811320754,informational,0.3,,,3,redes sociales en redes,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+agencia consigue ventas marketing digital lima peru magdalena del mar,0.0,0,0.5,0.0,transactional,0.9,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+publicidad redes sociales marketing,0.0,1100,0.5,0.33962264150943394,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+seo tips,0.0,1000,0.5,0.18867924528301888,informational,0.35,,,2,seo para seo peru,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+consultoria de marketing para pymes,0.0,0,0.5,0.0,transactional,0.85,,,4,para pymes marketing para,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+plan de marketing para pymes,0.0,0,0.5,0.0,transactional,0.85,,,4,para pymes marketing para,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+diplomado en marketing digital lima,0.0,0,0.5,0.0,commercial,0.65,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+diplomado marketing digital peru,0.0,0,0.5,0.0,commercial,0.65,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+automatizar una empresa,0.0,0,0.5,0.0,transactional,0.85,,,2,seo para seo peru,google_automatización negocios,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital precio peru,0.0,0,0.5,0.0,commercial,0.65,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+estrategias de marketing digital para pymes,0.0,0,0.5,0.0,transactional,0.9,,,4,para pymes marketing para,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing para pymes en redes sociales,0.0,0,0.5,0.0,transactional,0.85,,,3,redes sociales en redes,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital como herramienta de negocios para pymes,0.0,0,0.5,0.0,transactional,0.9,,,4,para pymes marketing para,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer marketing digital para empresas,0.0,0,0.5,0.0,transactional,0.9,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital como herramienta de negocios para pymes,0.0,0,0.5,0.0,transactional,0.9,,,4,para pymes marketing para,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing para pymes un enfoque para latinoamerica,0.0,0,0.5,0.0,transactional,0.85,,,1,marketing de de contenidos,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+costo de publicidad en redes sociales peru,0.0,0,0.5,0.0,commercial,0.6,,,6,redes sociales sociales peru,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+agencia seo para pymes,0.0,0,0.5,0.0,transactional,0.9,,,4,para pymes marketing para,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+email marketing para pymes,0.0,0,0.5,0.0,transactional,0.85,,,4,para pymes marketing para,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital para pymes,0.0,0,0.5,0.0,transactional,0.9,,,4,para pymes marketing para,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing para pymes pdf,0.0,0,0.5,0.0,transactional,0.85,,,4,para pymes marketing para,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+consultor seo para pymes,0.0,0,0.5,0.0,transactional,0.9,,,4,para pymes marketing para,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+seo local para pymes,0.0,0,0.5,0.0,transactional,0.9,,,4,para pymes marketing para,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+posicionamiento seo para pymes,0.0,0,0.5,0.0,transactional,0.9,,,4,para pymes marketing para,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+redes sociales peru,0.0,0,0.5,0.0,informational,0.3,,,6,redes sociales sociales peru,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+redes sociales lima,0.0,0,0.5,0.0,informational,0.3,,,6,redes sociales sociales peru,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital perueduca,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital lima,0.0,0,0.5,0.0,informational,0.35,,,5,marketing digital digital lima,google_publicidad digital Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+publicidad digital peru,0.0,0,0.5,0.0,informational,0.3,,,5,marketing digital digital lima,google_publicidad digital Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+pymes peru ejemplos,0.0,0,0.5,0.0,informational,0.3,,,4,para pymes marketing para,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de medicion marketing digital,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas para marketing de contenidos,0.0,0,0.5,0.0,commercial,0.6,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de gestion de redes,0.0,0,0.5,0.0,commercial,0.6,,,6,redes sociales sociales peru,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+redes sociales mas usadas peru,0.0,0,0.5,0.0,informational,0.3,,,6,redes sociales sociales peru,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+publicidad marketing digital peru sac,0.0,0,0.5,0.0,informational,0.35,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas marketing automation,0.0,0,0.5,0.0,commercial,0.6,,,0,marketing digital que es,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas marketing ia,0.0,0,0.5,0.0,commercial,0.6,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital presencial lima,0.0,0,0.5,0.0,informational,0.35,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas marketing remax,0.0,0,0.5,0.0,commercial,0.6,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+diplomado marketing digital,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital trabajo peru,0.0,0,0.5,0.0,informational,0.35,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital lima peru,0.0,0,0.5,0.0,informational,0.35,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital empresas peruanas,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital u lima,0.0,0,0.5,0.0,informational,0.35,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es pymes peru,0.0,0,0.5,0.0,informational,0.3,,,6,redes sociales sociales peru,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas para redes sociales y marketing digital,0.0,0,0.5,0.0,commercial,0.65,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas basicas para medir las redes sociales,0.0,0,0.5,0.0,commercial,0.6,,,6,redes sociales sociales peru,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que son las herramientas de marketing y publicidad,0.0,0,0.5,0.0,commercial,0.6,,,1,marketing de de contenidos,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+cuales son las herramientas del marketing,0.0,0,0.5,0.0,commercial,0.6,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que son las herramientas de marketing y publicidad,0.0,0,0.5,0.0,commercial,0.6,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es mejor marketing digital o community manager,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing digital cuales son,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing digital para emprendimientos productivos,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas marketing google,0.0,0,0.5,0.0,commercial,0.65,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+en que nivel de la evolucion del marketing se encuentran las pymes peruanas,0.0,0,0.5,0.0,informational,0.3,,,4,para pymes marketing para,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas digitales,0.0,0,0.5,0.0,commercial,0.6,,,0,marketing digital que es,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital precio colombia,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing redes sociales precio,0.0,0,0.5,0.0,commercial,0.6,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing personal,0.0,0,0.5,0.0,commercial,0.6,,,1,marketing de de contenidos,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing ejemplos,0.0,0,0.5,0.0,commercial,0.6,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas de marketing personal,0.0,0,0.5,0.0,commercial,0.6,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas marketing de contenidos,0.0,0,0.5,0.0,commercial,0.6,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing herramientas de comunicacion,0.0,0,0.5,0.0,commercial,0.6,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital certificado profesionalidad,0.0,0,0.5,0.0,transactional,0.9,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramientas marketing digital ejemplos,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+eae marketing digital precio,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+mejor master marketing digital,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital unab precio,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+publicidad lima,0.0,0,0.5,0.0,informational,0.3,,,5,marketing digital digital lima,google_publicidad digital Lima,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+seo lima,0.0,0,0.5,0.0,informational,0.35,,,2,seo para seo peru,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+pymes peru,0.0,0,0.5,0.0,informational,0.3,,,4,para pymes marketing para,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+seo precio,0.0,0,0.5,0.0,commercial,0.65,,,2,seo para seo peru,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+guia de marketing de contenidos,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+guia completa de marketing digital,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+guia de aprendizaje marketing digital,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+social media and online marketing,0.0,0,0.5,0.0,commercial,0.65,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+redes sociales para ventas online,0.0,0,0.5,0.0,commercial,0.6,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos segun autores,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos pagina web,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing digital concepto,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos y storytelling,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital y comercio electronico,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing digital analitico,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing digital pdf,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing para un negocio pequeno,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+estrategias marketing digital,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital tendencias,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing redes sociales,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing profesional concepto,0.0,0,0.5,0.0,transactional,0.85,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital pdf,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+becas marketing digital,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+congreso marketing digital,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+digital marketing predictions,0.0,0,0.5,0.0,informational,0.3,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+calendario marketing digital,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital upc,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital reddit,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing para mypes,0.0,0,0.5,0.0,informational,0.3,,,4,para pymes marketing para,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de precios,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+automatizacion de negocios,0.0,0,0.5,0.0,informational,0.3,,,2,seo para seo peru,google_automatización negocios,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+automatizar un negocio,0.0,0,0.5,0.0,informational,0.3,,,2,seo para seo peru,google_automatización negocios,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+redes de mercadeo,0.0,0,0.5,0.0,informational,0.3,,,6,redes sociales sociales peru,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer marketing en redes sociales,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer una estrategia de marketing de contenidos,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es una estrategia de marketing de contenidos,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer marketing digital con inteligencia artificial,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer marketing digital con ia,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+guia para entender el marketing digital,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+guia de regulaciones de marketing digital,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer una estrategia de marketing en redes sociales,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+guia de marketing en redes sociales,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer marketing en redes sociales,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+redes sociales y marketing de contenidos,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es redes sociales en marketing,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+redes sociales y marketing 20 comm092po,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+administracion de redes sociales y marketing online,0.0,0,0.5,0.0,commercial,0.6,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como realizar marketing digital en redes sociales,0.0,0,0.5,0.0,informational,0.35,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing para redes sociales,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+estrategias de marketing en redes sociales,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital y redes sociales online,0.0,0,0.5,0.0,commercial,0.65,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer marketing para mi negocio,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos eva sanagustin pdf,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer un plan de marketing de contenidos,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que incluye el marketing de contenidos,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como puedo hacer marketing de contenidos,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos ejemplos de empresas,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es un plan de marketing de contenidos,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing de contenidos ejemplo,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos y la decision de compra del consumidor de la generacion y,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es seo y marketing de contenidos,0.0,0,0.5,0.0,informational,0.35,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer marketing de un producto,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer marketing digital y ganar dinero,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing digital y ecommerce,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing digital y para que sirve,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing digital segun autores,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing digital cuanto gana,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer marketing digital desde cuba,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital para profesionales de la salud,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing digital y como funciona,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing digital y comercio electronico,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es redes de mercadeo marketing,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+seo clave para el crecimiento de las pymes,0.0,0,0.5,0.0,informational,0.35,,,4,para pymes marketing para,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+seo para facebook,0.0,0,0.5,0.0,informational,0.35,,,2,seo para seo peru,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer marketing digital en facebook,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+seo pyme,0.0,0,0.5,0.0,informational,0.35,,,4,para pymes marketing para,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+seo update,0.0,0,0.5,0.0,informational,0.35,,,2,seo para seo peru,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+guia do marketing digital,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es marketing empresarial,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+redes sociales marketing pdf,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+redes sociales marketing digital,0.0,0,0.5,0.0,informational,0.35,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+importancia redes sociales marketing,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing online redes sociales,0.0,0,0.5,0.0,commercial,0.6,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+licenciatura redes sociales marketing,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+linkedin social media marketing,0.0,0,0.5,0.0,informational,0.35,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+trabajar redes sociales marketing,0.0,0,0.5,0.0,informational,0.3,,,3,redes sociales en redes,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+redes sociales mas usadas,0.0,0,0.5,0.0,informational,0.3,,,6,redes sociales sociales peru,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+que es redes sociales,0.0,0,0.5,0.0,informational,0.3,,,6,redes sociales sociales peru,google_redes sociales marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+negocio automatico,0.0,0,0.5,0.0,informational,0.3,,,2,seo para seo peru,google_automatización negocios,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+automatizacion trabajo,0.0,0,0.5,0.0,informational,0.3,,,2,seo para seo peru,google_automatización negocios,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+como hacer marketing personal,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_herramientas de marketing pymes Perú,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+herramienta de marketing directo,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_herramientas marketing,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos tesis,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos ejemplos,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos pdf,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing de contenidos isil,0.0,0,0.5,0.0,informational,0.3,,,1,marketing de de contenidos,google_marketing de contenidos,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+digital marketing online degree,0.0,0,0.5,0.0,commercial,0.6,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital salidas profesionales,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+tarifario marketing digital argentina,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital perfil profesional,0.0,0,0.5,0.0,transactional,0.9,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital online duoc,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital online master,0.0,0,0.5,0.0,commercial,0.65,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital cuanto gana,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital para emprendedores,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing personal y profesional,0.0,0,0.5,0.0,transactional,0.85,,,1,marketing de de contenidos,google_marketing para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+seo para landing page,0.0,0,0.5,0.0,informational,0.35,,,2,seo para seo peru,google_seo para pymes,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital quito precios,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital precios argentina,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital paraguay precios,0.0,0,0.5,0.0,informational,0.35,,,5,marketing digital digital lima,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+automatizar procesos de negocio,0.0,0,0.5,0.0,informational,0.3,,,2,seo para seo peru,google_automatización negocios,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935
+marketing digital sena,0.0,0,0.5,0.0,informational,0.35,,,0,marketing digital que es,google_marketing digital,unknown,0.4,0.4,0.2,,2025-09-19T23:04:32.037935

@@ -202,7 +202,9 @@ class KeywordFinder:
             all_keywords, min_priority=0.4
         )
         logging.info(
-            "Filtered to %d relevant keywords, rejected %d", len(all_keywords), len(rejected_keywords)
+            "Filtered to %d relevant keywords, rejected %d",
+            len(all_keywords),
+            len(rejected_keywords),
         )
 
         # Fase 5: Scoring y ranking

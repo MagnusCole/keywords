@@ -154,7 +154,9 @@ class KeywordDatabase:
             # Legacy initialization for backward compatibility
             self._init_database()
 
-        logging.info("Database initialized at %s (standardized=%s)", db_path, use_standardized_schema)
+        logging.info(
+            "Database initialized at %s (standardized=%s)", db_path, use_standardized_schema
+        )
 
     def _apply_pragmas(self, conn: sqlite3.Connection) -> None:
         """Apply SQLite pragmas for better performance and resilience."""

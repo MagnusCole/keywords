@@ -399,7 +399,9 @@ class KeywordFinder:
                     new_seeds = current_pool[:limit]
                     if not new_seeds:
                         break
-                    logging.info("Expansion round %d/%d: expanding %d seeds", r, rounds, len(new_seeds))
+                    logging.info(
+                        "Expansion round %d/%d: expanding %d seeds", r, rounds, len(new_seeds)
+                    )
                     round_result = await self.scraper.expand_keywords(
                         new_seeds, include_alphabet_soup=self.config.get("alphabet_soup", False)
                     )

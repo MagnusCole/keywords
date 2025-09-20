@@ -63,11 +63,10 @@ class KeywordExporter:
             )
 
             logger.info(
-                "Standardized CSV export complete: %s keywords "
-                "exported to %s (v%s)",
+                "Standardized CSV export complete: %s keywords " "exported to %s (v%s)",
                 export_metadata.record_count,
                 filepath,
-                export_metadata.export_version
+                export_metadata.export_version,
             )
 
             return filepath
@@ -238,11 +237,10 @@ class KeywordExporter:
             )
 
             logger.info(
-                "Standardized cluster report complete: %s clusters "
-                "exported to %s (v%s)",
+                "Standardized cluster report complete: %s clusters " "exported to %s (v%s)",
                 export_metadata.record_count,
                 filepath,
-                export_metadata.export_version
+                export_metadata.export_version,
             )
 
             return filepath

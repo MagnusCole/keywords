@@ -650,8 +650,7 @@ class GoogleScraper:
                 results[seed] = await self._expand_keywords_sequential(seed, variations)
             except asyncio.CancelledError:
                 logging.info(
-                    "Parallel expansion cancelled for '%s', falling back to sequential",
-                    seed
+                    "Parallel expansion cancelled for '%s', falling back to sequential", seed
                 )
                 results[seed] = await self._expand_keywords_sequential(seed, variations)
             except Exception as e:
