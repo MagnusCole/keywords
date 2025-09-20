@@ -89,7 +89,8 @@ def main():
         mode = st.radio(
             "Cómo quieres proporcionar tus keywords:",
             ["📤 Subir archivo", "✏️ Ingresar manualmente"],
-            help="Elige cómo quieres proporcionar las keywords para el análisis"
+            help="Elige cómo quieres proporcionar las keywords para el análisis",
+            key="input_mode_radio"
         )
 
         keywords = []
@@ -102,7 +103,8 @@ def main():
             uploaded_file = st.file_uploader(
                 "Selecciona un archivo CSV o TXT con tus keywords",
                 type=['csv', 'txt'],
-                help="El archivo debe contener una columna con keywords, una por línea"
+                help="El archivo debe contener una columna con keywords, una por línea",
+                key="keyword_file_uploader"
             )
 
             if uploaded_file is not None:
@@ -125,7 +127,8 @@ def main():
                 "Escribe tus keywords (una por línea):",
                 height=150,
                 placeholder="marketing digital\nseo\ngoogle ads\nmarketing para pymes",
-                help="Escribe cada keyword en una línea separada"
+                help="Escribe cada keyword en una línea separada",
+                key="manual_keywords_textarea"
             )
 
             if manual_keywords.strip():
@@ -141,25 +144,16 @@ def main():
 
             col_a, col_b = st.columns(2)
             with col_a:
-                geo = st.selectbox("País", ["PE", "MX", "CO", "CL", "AR"], index=0)
-                language = st.selectbox("Idioma", ["es", "en"], index=0)
-
-        # Configuration options (only show if we have keywords)
-        if keywords:
-            st.markdown("### ⚙️ Configuración del Análisis")
-
-            col_a, col_b = st.columns(2)
-            with col_a:
-                geo = st.selectbox("País", ["PE", "MX", "CO", "CL", "AR"], index=0)
-                language = st.selectbox("Idioma", ["es", "en"], index=0)
+                geo = st.selectbox("País", ["PE", "MX", "CO", "CL", "AR"], index=0, key="geo_select")
+                language = st.selectbox("Idioma", ["es", "en"], index=0, key="language_select")
 
             with col_b:
-                max_keywords = st.slider("Máximo keywords a analizar", 50, 500, 200)
-                niche_name = st.text_input("Nombre del nicho", "Mi Nicho")
+                max_keywords = st.slider("Máximo keywords a analizar", 50, 500, 200, key="max_keywords_slider")
+                niche_name = st.text_input("Nombre del nicho", "Mi Nicho", key="niche_name_input")
 
             # AI Enhancement Section
             st.markdown("### 🤖 Mejora con IA (Opcional)")
-            use_ai = st.checkbox("🔥 Activar Asistente de IA con Grok", help="Usa IA para generar sugerencias adicionales y análisis avanzado")
+            use_ai = st.checkbox("🔥 Activar Asistente de IA con Grok", help="Usa IA para generar sugerencias adicionales y análisis avanzado", key="use_ai_checkbox")
 
             ai_assistant = None
             ai_api_key = ""
@@ -170,7 +164,8 @@ def main():
                     "API Key de OpenRouter",
                     type="password",
                     help="Ingresa tu API key de OpenRouter (se mantiene privada)",
-                    placeholder="sk-or-v1-xxxxxxxxxxxxxxxx"
+                    placeholder="sk-or-v1-xxxxxxxxxxxxxxxx",
+                    key="ai_api_key_input"
                 )
 
                 if ai_api_key:
