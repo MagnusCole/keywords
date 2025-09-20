@@ -167,7 +167,7 @@ class StandardizedExporter:
             return str(filepath), metadata
 
         except Exception as e:
-            raise Exception(f"Failed to export keywords to CSV: {e}")
+            raise Exception(f"Failed to export keywords to CSV: {e}") from e
 
     def export_cluster_summary(
         self,
@@ -253,7 +253,7 @@ class StandardizedExporter:
             return str(filepath), metadata
 
         except Exception as e:
-            raise Exception(f"Failed to export cluster summary: {e}")
+            raise Exception(f"Failed to export cluster summary: {e}") from e
 
     def export_data(self, data: list, filename: str) -> Path:
         """Export data using the configured standard."""

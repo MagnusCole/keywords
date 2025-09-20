@@ -32,7 +32,7 @@ class BasicKeywordScorer:
             return sorted(keywords_data, key=lambda x: x.get("score", 0), reverse=True)
 
         except Exception as e:
-            self.logger.error(f"Error calculating basic scores: {e}")
+            self.logger.error("Error calculating basic scores: %s", e)
             return keywords_data
 
 
@@ -595,8 +595,8 @@ class KeywordScorer(AdvancedKeywordScorer):
             else:
                 return 0.0
 
-        except Exception as e:
-            logging.error(f"Error in legacy calculate_score: {e}")
+        except (ValueError, TypeError) as e:
+            logging.error("Error in legacy calculate_score: %s", e)
             return 0.0
 
     # ---------- Métodos legacy requeridos por main.py ----------

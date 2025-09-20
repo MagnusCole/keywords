@@ -29,7 +29,7 @@ class GoogleTrendsAnalyzer:
             self.pytrends = TrendReq(hl=self.hl, tz=self.tz, timeout=10)  # Reducido de 20 a 10
             logging.info("PyTrends connection established")
         except Exception as e:
-            logging.error(f"Failed to initialize PyTrends: {e}")
+            logging.error("Failed to initialize PyTrends: %s", e)
             self.pytrends = None
 
     async def get_trend_data_async(
@@ -144,11 +144,11 @@ class GoogleTrendsAnalyzer:
                 else:
                     results[keyword] = self._empty_trend_data()
 
-            logging.info(f"Processed trends for {len(keywords)} keywords")
+            logging.info("Processed trends for %s keywords", len(keywords))
             return results
 
         except Exception as e:
-            logging.error(f"Error processing keyword batch {keywords}: {e}")
+            logging.error("Error processing keyword batch %s: %s", keywords, e)
             # Retornar datos vacíos para cada keyword
             return {kw: self._empty_trend_data() for kw in keywords}
 
@@ -188,7 +188,7 @@ class GoogleTrendsAnalyzer:
             return trend_data
 
         except Exception as e:
-            logging.warning(f"Error in fast analysis for {keyword}: {e}")
+            logging.warning("Error in fast analysis for %s: %s", keyword, e)
             return self._empty_trend_data()
 
     def _analyze_keyword_trends(  # noqa: C901
@@ -247,9 +247,9 @@ class GoogleTrendsAnalyzer:
                         trend_data["data_quality"] = "high"
 
                 except Exception as e:
-                    logging.warning(f"Error processing interest data for {keyword}: {e}")
+                    logging.warning("Error processing interest data for %s: %s", keyword, e)
             else:
-                logging.debug(f"No valid interest data for {keyword}")
+                logging.debug("No valid interest data for %s", keyword)
 
             # Validación robusta para regional_data
             has_regional_data = (
@@ -269,7 +269,7 @@ class GoogleTrendsAnalyzer:
                             str(k): float(v) for k, v in regional_interest.items() if v > 0
                         }
                 except Exception as e:
-                    logging.warning(f"Error processing regional data for {keyword}: {e}")
+                    logging.warning("Error processing regional data for %s: %s", keyword, e)
 
             # Validación robusta para related_queries
             if isinstance(related_queries, dict) and keyword in related_queries:
@@ -287,12 +287,12 @@ class GoogleTrendsAnalyzer:
                         related_kws = related["top"]["query"].head(5).tolist()
                         trend_data["related_keywords"] = [str(kw) for kw in related_kws if kw]
                 except Exception as e:
-                    logging.warning(f"Error processing related queries for {keyword}: {e}")
+                    logging.warning("Error processing related queries for %s: %s", keyword, e)
 
             return trend_data
 
         except Exception as e:
-            logging.error(f"Error analyzing trends for {keyword}: {e}")
+            logging.error("Error analyzing trends for %s: %s", keyword, e)
             # Return safe fallback data
             return {
                 "keyword": keyword,
@@ -370,7 +370,7 @@ class GoogleTrendsAnalyzer:
                 return keywords
 
         except Exception as e:
-            logging.error(f"Error getting trending keywords: {e}")
+            logging.error("Error getting trending keywords: %s", e)
 
         return []
 
@@ -420,7 +420,7 @@ class GoogleTrendsAnalyzer:
             return {"ranking": [kw for kw, _ in ranked], "metrics": comparison}
 
         except Exception as e:
-            logging.error(f"Error comparing keywords: {e}")
+            logging.error("Error comparing keywords: %s", e)
             return {}
 
     def get_keyword_suggestions(self, seed_keyword: str) -> list[str]:
@@ -447,6 +447,6 @@ class GoogleTrendsAnalyzer:
                 return keywords[:10]  # Limitar a 10 sugerencias
 
         except Exception as e:
-            logging.error(f"Error getting suggestions for {seed_keyword}: {e}")
+            logging.error("Error getting suggestions for %s: %s", seed_keyword, e)
 
         return []

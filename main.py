@@ -11,26 +11,27 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 # Agregar el directorio src al path para importar módulos
 src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
-from keyword_finder.core.ads_volume import GoogleAdsVolumeProvider
-from keyword_finder.core.categorization import KeywordCategorizer
-from keyword_finder.core.clustering import SemanticClusterer
-from keyword_finder.core.database import Keyword, KeywordDatabase
-from keyword_finder.core.exporters import KeywordExporter
-from keyword_finder.core.scoring import AdvancedKeywordScorer
-from keyword_finder.core.scrapers import GoogleScraper
-from keyword_finder.core.trends import GoogleTrendsAnalyzer
+from keyword_finder.core.ads_volume import GoogleAdsVolumeProvider  # noqa: E402
+from keyword_finder.core.categorization import KeywordCategorizer  # noqa: E402
+from keyword_finder.core.clustering import SemanticClusterer  # noqa: E402
+from keyword_finder.core.database import Keyword, KeywordDatabase  # noqa: E402
+from keyword_finder.core.exporters import KeywordExporter  # noqa: E402
+from keyword_finder.core.scoring import AdvancedKeywordScorer  # noqa: E402
+from keyword_finder.core.scrapers import GoogleScraper  # noqa: E402
+from keyword_finder.core.trends import GoogleTrendsAnalyzer  # noqa: E402
 
 try:
     from dotenv import load_dotenv
 
     load_dotenv()
 except ImportError as _e:
-    logging.debug(f"dotenv not loaded (module missing): {_e}")
+    logging.debug("dotenv not loaded (module missing): %s", _e)
 
 
 class KeywordFinder:
@@ -118,7 +119,7 @@ class KeywordFinder:
         Returns:
             Tuple de (keywords rankeadas, clusters inteligentes, keywords rechazadas)
         """
-        logging.info(f"Starting keyword discovery for seeds: {seed_keywords}")
+        logging.info("Starting keyword discovery for seeds: %s", seed_keywords)
         # Correlation id for this execution to tag rows in DB/exports
         run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
@@ -192,8 +193,8 @@ class KeywordFinder:
                         v = ads_volumes.get(kwd["keyword"])
                         if v and v > 0:
                             kwd["volume"] = int(v)
-            except Exception as e:
-                logging.warning(f"Ads volume integration failed; continuing with heuristics: {e}")
+            except (KeyError, ValueError, TypeError) as e:
+                logging.warning("Ads volume integration failed; continuing with heuristics: %s", e)
 
         # Fase 4: Categorización y filtrado
         logging.info("Phase 4: Categorizing and filtering keywords")
@@ -201,7 +202,7 @@ class KeywordFinder:
             all_keywords, min_priority=0.4
         )
         logging.info(
-            f"Filtered to {len(all_keywords)} relevant keywords, rejected {len(rejected_keywords)}"
+            "Filtered to %d relevant keywords, rejected %d", len(all_keywords), len(rejected_keywords)
         )
 
         # Fase 5: Scoring y ranking
@@ -237,7 +238,7 @@ class KeywordFinder:
                 clusters[source].append(kw)
                 kw["cluster_id"] = hash(source) % 1000  # Simple ID
                 kw["cluster_label"] = source
-        logging.info(f"Created {len(clusters)} keyword clusters")
+        logging.info("Created %d keyword clusters", len(clusters))
 
         # Fase 5: Guardar en base de datos
         logging.info("Phase 5: Saving to database")
@@ -266,7 +267,7 @@ class KeywordFinder:
 
         self.db.insert_keywords_batch(keyword_objects)
 
-        logging.info(f"Keyword discovery completed. Found {len(scored_keywords)} keywords")
+        logging.info("Keyword discovery completed. Found %d keywords", len(scored_keywords))
         return scored_keywords, clusters, rejected_keywords
 
     async def generate_reports(
@@ -299,7 +300,7 @@ class KeywordFinder:
         if "csv" in export_formats:
             csv_file = self.exporter.export_to_csv(keywords, f"keyword_analysis_{timestamp}.csv")
             generated_files["csv"] = csv_file
-            logging.info(f"CSV report generated: {csv_file}")
+            logging.info("CSV report generated: %s", csv_file)
 
             # Exportar reportes de clusters si están disponibles
             if clusters:
@@ -312,7 +313,7 @@ class KeywordFinder:
                 generated_files["cluster_report"] = cluster_report_file
                 generated_files["cluster_summary"] = cluster_summary_file
                 logging.info(
-                    f"Cluster reports generated: {cluster_report_file}, {cluster_summary_file}"
+                    "Cluster reports generated: %s, %s", cluster_report_file, cluster_summary_file
                 )
 
         if "pdf" in export_formats:
@@ -322,18 +323,18 @@ class KeywordFinder:
                 title=f"Keyword Research Report - {datetime.now().strftime('%d/%m/%Y')}",
             )
             generated_files["pdf"] = pdf_file
-            logging.info(f"PDF report generated: {pdf_file}")
+            logging.info("PDF report generated: %s", pdf_file)
 
         return generated_files
 
-    def get_existing_keywords(self, filters: dict | None = None) -> list[dict]:
+    def get_existing_keywords(self, filters: dict | None = None) -> list[dict[str, Any]]:
         """Obtiene keywords existentes de la base de datos"""
         return self.db.get_keywords(
             limit=filters.get("limit") if filters else None,
             min_score=filters.get("min_score", 0) if filters else 0,
         )
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, Any]:
         """Obtiene estadísticas de la base de datos"""
         return self.db.get_stats()
 
@@ -501,8 +502,6 @@ Ejemplos de uso:
             all_seeds.extend(args.seeds)
         if args.seeds_file:
             try:
-                from pathlib import Path
-
                 seed_path = Path(args.seeds_file)
                 if not seed_path.exists():
                     raise FileNotFoundError(f"No existe el archivo: {seed_path}")
@@ -511,8 +510,8 @@ Ejemplos de uso:
                         s = line.strip()
                         if s and not s.startswith("#"):
                             all_seeds.append(s)
-            except Exception as e:
-                logging.error(f"No se pudieron leer seeds desde archivo: {e}")
+            except (OSError, FileNotFoundError) as e:
+                logging.error("No se pudieron leer seeds desde archivo: %s", e)
                 print(f"❌ Error leyendo --seeds-file: {e}")
                 return
 
@@ -582,15 +581,15 @@ Ejemplos de uso:
                     "duration_ms": int((datetime.now() - start_ts).total_seconds() * 1000),
                 },
             )
-        except Exception as e:
-            logging.debug(f"Failed to persist run metrics: {e}")
+        except (OSError, ValueError, TypeError) as e:
+            logging.debug("Failed to persist run metrics: %s", e)
 
         print(f"\n✨ Proceso completado. {len(keywords)} keywords procesadas y guardadas.")
 
     except KeyboardInterrupt:
         print("\n🛑 Proceso interrumpido por el usuario.")
     except Exception as e:
-        logging.error(f"Error en ejecución principal: {e}")
+        logging.error("Error en ejecución principal: %s", e)
         print(f"❌ Error: {e}")
     finally:
         await finder.cleanup()

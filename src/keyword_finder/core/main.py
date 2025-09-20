@@ -37,7 +37,7 @@ try:
 
     load_dotenv()
 except ImportError as _e:
-    logging.debug(f"dotenv not loaded (module missing): {_e}")
+    logging.debug("dotenv not loaded (module missing): %s", _e)
 
 
 class KeywordFinder:
@@ -317,7 +317,7 @@ class KeywordFinder:
         Returns:
             Tuple de (keywords rankeadas, clusters inteligentes, keywords rechazadas)
         """
-        logging.info(f"Starting keyword discovery for seeds: {seed_keywords}")
+        logging.info("Starting keyword discovery for seeds: %s", seed_keywords)
         # Correlation id for this execution to tag rows in DB/exports
         run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
@@ -399,7 +399,7 @@ class KeywordFinder:
                     new_seeds = current_pool[:limit]
                     if not new_seeds:
                         break
-                    logging.info(f"Expansion round {r}/{rounds}: expanding {len(new_seeds)} seeds")
+                    logging.info("Expansion round %d/%d: expanding %d seeds", r, rounds, len(new_seeds))
                     round_result = await self.scraper.expand_keywords(
                         new_seeds, include_alphabet_soup=self.config.get("alphabet_soup", False)
                     )
@@ -489,7 +489,7 @@ class KeywordFinder:
                         "status_code": e.context.get("status_code"),
                     },
                 )
-            except Exception as e:
+            except (ValueError, TypeError, KeyError) as e:
                 logging.warning(
                     "Ads volume integration failed; continuing with heuristics",
                     extra={
@@ -523,7 +523,7 @@ class KeywordFinder:
             kw_copy["score"] = score
             scored_keywords.append(kw_copy)
 
-        logging.info(f"Calculated scores for {len(scored_keywords)} keywords")
+        logging.info("Calculated scores for %d keywords", len(scored_keywords))
 
         # Store empty metadata for legacy scoring
         self.last_scoring_metadata = None
@@ -715,7 +715,7 @@ class KeywordFinder:
 
         self.db.insert_keywords_batch(keyword_objects)
 
-        logging.info(f"Keyword discovery completed. Found {len(scored_keywords)} keywords")
+        logging.info("Keyword discovery completed. Found %d keywords", len(scored_keywords))
         return scored_keywords, clusters, rejected_keywords
 
     async def generate_reports(
@@ -752,7 +752,7 @@ class KeywordFinder:
                 scoring_metadata=self.last_scoring_metadata,
             )
             generated_files["csv"] = csv_file
-            logging.info(f"CSV report generated: {csv_file}")
+            logging.info("CSV report generated: %s", csv_file)
 
             # Exportar reportes de clusters si están disponibles
             if clusters:
@@ -775,7 +775,7 @@ class KeywordFinder:
                 title=f"Keyword Research Report - {datetime.now().strftime('%d/%m/%Y')}",
             )
             generated_files["pdf"] = pdf_file
-            logging.info(f"PDF report generated: {pdf_file}")
+            logging.info("PDF report generated: %s", pdf_file)
 
         # Briefs por cluster (Markdown) cuando se solicita
         if "briefs" in export_formats and clusters:
@@ -785,7 +785,7 @@ class KeywordFinder:
                 geo=self.config.get("geo"),
             )
             generated_files["briefs"] = briefs_dir
-            logging.info(f"Briefs generated in directory: {briefs_dir}")
+            logging.info("Briefs generated in directory: %s", briefs_dir)
 
         return generated_files
 
@@ -1014,7 +1014,7 @@ Ejemplos de uso:
             )
             print(f"❌ Configuration error: {e}")
             return
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logging.error(
                 "Unexpected error loading YAML configuration",
                 extra={"error_type": type(e).__name__, "error": str(e)},
@@ -1026,7 +1026,7 @@ Ejemplos de uso:
     def _use_cfg_if_default(arg_value, arg_name: str, cfg_value):
         try:
             default_val = parser.get_default(arg_name)
-        except Exception:
+        except (AttributeError, KeyError):
             default_val = None
         return (
             cfg_value
@@ -1174,7 +1174,7 @@ Ejemplos de uso:
                         if s and not s.startswith("#"):
                             all_seeds.append(s)
             except Exception as e:
-                logging.error(f"No se pudieron leer seeds desde archivo: {e}")
+                logging.error("No se pudieron leer seeds desde archivo: %s", e)
                 print(f"❌ Error leyendo --seeds-file: {e}")
                 return
 
@@ -1266,14 +1266,14 @@ Ejemplos de uso:
                 },
             )
         except Exception as e:
-            logging.debug(f"Failed to persist run metrics: {e}")
+            logging.debug("Failed to persist run metrics: %s", e)
 
         print(f"\n✨ Proceso completado. {len(keywords)} keywords procesadas y guardadas.")
 
     except KeyboardInterrupt:
         print("\n🛑 Proceso interrumpido por el usuario.")
     except Exception as e:
-        logging.error(f"Error en ejecución principal: {e}")
+        logging.error("Error en ejecución principal: %s", e)
         print(f"❌ Error: {e}")
     finally:
         await finder.cleanup()

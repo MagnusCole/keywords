@@ -96,7 +96,7 @@ def set_log_context(run_id: str, component: str, operation: str) -> None:
     )
 
 
-def load_config(config_path: str, overrides: dict[str, Any] | None = None) -> Any:
+def load_config(config_path: str, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     """
     Load configuration from YAML file.
 
@@ -133,14 +133,9 @@ def load_config(config_path: str, overrides: dict[str, Any] | None = None) -> An
 
             data = deep_merge(data, overrides)
 
-        # Create a simple config object
-        class Config:
-            def __init__(self, data: dict):
-                self.data = data
-
-        return Config(data)
+        return data
 
     except ImportError:
         raise ConfigError("PyYAML is required for configuration loading") from None
-    except Exception as e:
+    except (ValueError, OSError) as e:
         raise ConfigError(f"Failed to load configuration: {e}") from e

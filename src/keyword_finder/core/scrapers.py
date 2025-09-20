@@ -159,8 +159,8 @@ class GoogleScraper:
                 if encoding == "br" and hasattr(brotli, "decompress"):
                     try:
                         content = brotli.decompress(content)
-                    except Exception as e:
-                        logging.warning(f"Manual brotli decompression failed: {e}")
+                    except (ValueError, TypeError) as e:
+                        logging.warning("Manual brotli decompression failed: %s", e)
                         # Let httpx handle it
                         pass
 
@@ -183,15 +183,15 @@ class GoogleScraper:
                     await asyncio.sleep(wait_time)
                     continue
                 else:
-                    logging.error(f"HTTP error {e.response.status_code} for {url}")
+                    logging.error("HTTP error %s for %s", e.response.status_code, url)
 
             except Exception as e:
-                logging.error(f"Request failed for {url}: {e}")
+                logging.error("Request failed for %s: %s", url, e)
 
             if attempt < self.max_retries - 1:
                 await asyncio.sleep(2**attempt)
 
-        logging.error(f"All retries failed for {url}")
+        logging.error("All retries failed for %s", url)
         return ""
 
     async def get_autocomplete_suggestions(self, query: str) -> list[str]:
@@ -228,11 +228,11 @@ class GoogleScraper:
                 else:
                     logging.warning(f"Unexpected autocomplete format for {query}: {data}")
             except json.JSONDecodeError as e:
-                logging.error(f"Failed to parse autocomplete JSON for {query}: {e}")
-                logging.debug(f"Raw response: {response_text[:500]}")
+                logging.error("Failed to parse autocomplete JSON for %s: %s", query, e)
+                logging.debug("Raw response: %s", response_text[:500])
 
         except Exception as e:
-            logging.error(f"Error getting autocomplete for {query}: {e}")
+            logging.error("Error getting autocomplete for %s: %s", query, e)
 
         return []
 
@@ -272,11 +272,11 @@ class GoogleScraper:
             # Limitar a las mejores sugerencias
             filtered = list(set(filtered))[:8]
 
-            logging.info(f"Got {len(filtered)} related searches for '{query}'")
+            logging.info("Got %s related searches for '%s'", len(filtered), query)
             return filtered
 
         except Exception as e:
-            logging.error(f"Error getting related searches for {query}: {e}")
+            logging.error("Error getting related searches for %s: %s", query, e)
             return []
 
     def _parse_real_related_searches(self, parser: HTMLParser) -> list[str]:
@@ -373,7 +373,7 @@ class GoogleScraper:
                 filtered = self._filter_keywords(suggestions)
                 return filtered
         except Exception as e:
-            logging.error(f"Error getting YouTube suggestions for {query}: {e}")
+            logging.error("Error getting YouTube suggestions for %s: %s", query, e)
         return []
 
     def _filter_keywords(self, keywords: list[str]) -> list[str]:
@@ -650,11 +650,12 @@ class GoogleScraper:
                 results[seed] = await self._expand_keywords_sequential(seed, variations)
             except asyncio.CancelledError:
                 logging.info(
-                    f"Parallel expansion cancelled for '{seed}', falling back to sequential"
+                    "Parallel expansion cancelled for '%s', falling back to sequential",
+                    seed
                 )
                 results[seed] = await self._expand_keywords_sequential(seed, variations)
             except Exception as e:
-                logging.error(f"Error in parallel expansion for '{seed}': {e}")
+                logging.error("Error in parallel expansion for '%s': %s", seed, e)
                 # Fallback to sequential processing
                 results[seed] = await self._expand_keywords_sequential(seed, variations)
 
@@ -673,10 +674,10 @@ class GoogleScraper:
             logging.warning(f"Timeout getting autocomplete for '{variation}'")
             return []
         except asyncio.CancelledError:
-            logging.info(f"Autocomplete task cancelled for '{variation}'")
+            logging.info("Autocomplete task cancelled for '%s'", variation)
             return []
         except Exception as e:
-            logging.warning(f"Failed to get autocomplete for '{variation}': {e}")
+            logging.warning("Failed to get autocomplete for '%s': %s", variation, e)
             return []
 
     async def _get_youtube_with_semaphore(
@@ -687,13 +688,13 @@ class GoogleScraper:
             async with semaphore:
                 return await asyncio.wait_for(self.get_youtube_suggestions(variation), timeout=15.0)
         except TimeoutError:
-            logging.warning(f"Timeout getting YouTube suggestions for '{variation}'")
+            logging.warning("Timeout getting YouTube suggestions for '%s'", variation)
             return []
         except asyncio.CancelledError:
-            logging.info(f"YouTube task cancelled for '{variation}'")
+            logging.info("YouTube task cancelled for '%s'", variation)
             return []
         except Exception as e:
-            logging.warning(f"Failed to get YouTube suggestions for '{variation}': {e}")
+            logging.warning("Failed to get YouTube suggestions for '%s': %s", variation, e)
             return []
 
     async def _get_related_with_semaphore(
@@ -704,13 +705,13 @@ class GoogleScraper:
             async with semaphore:
                 return await asyncio.wait_for(self.get_related_searches(seed), timeout=15.0)
         except TimeoutError:
-            logging.warning(f"Timeout getting related searches for '{seed}'")
+            logging.warning("Timeout getting related searches for '%s'", seed)
             return []
         except asyncio.CancelledError:
-            logging.info(f"Related search task cancelled for '{seed}'")
+            logging.info("Related search task cancelled for '%s'", seed)
             return []
         except Exception as e:
-            logging.warning(f"Failed to get related searches for '{seed}': {e}")
+            logging.warning("Failed to get related searches for '%s': %s", seed, e)
             return []
 
     async def _expand_keywords_sequential(self, seed: str, variations: list[str]) -> list[str]:
@@ -866,12 +867,12 @@ class CompetitorScraper:
 
             # Remover duplicados
             unique_keywords = list(set(filtered_keywords))
-            logging.info(f"Extracted {len(unique_keywords)} keywords from {domain}")
+            logging.info("Extracted %s keywords from %s", len(unique_keywords), domain)
 
             return unique_keywords
 
         except Exception as e:
-            logging.error(f"Error scraping competitor {domain}: {e}")
+            logging.error("Error scraping competitor %s: %s", domain, e)
             return []
         finally:
             # Close scraper if we created it temporarily

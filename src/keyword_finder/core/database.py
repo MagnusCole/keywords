@@ -53,7 +53,7 @@ class SQLiteMonitor:
 
         # Log de queries lentas (>100ms)
         if execution_time > 0.1:
-            logging.warning(f"Consulta lenta detectada: {execution_time:.2f}s - {query_type}")
+            logging.warning("Consulta lenta detectada: %.2fs - %s", execution_time, query_type)
 
     def get_performance_stats(self) -> dict:
         """Obtiene estadísticas de rendimiento."""
@@ -90,7 +90,7 @@ class SQLiteMonitor:
                     "last_updated": datetime.now().isoformat(),
                 }
         except sqlite3.Error as e:
-            logging.error(f"Error getting database stats: {e}")
+            logging.error("Error getting database stats: %s", e)
             return {"error": str(e)}
 
 
@@ -154,7 +154,7 @@ class KeywordDatabase:
             # Legacy initialization for backward compatibility
             self._init_database()
 
-        logging.info(f"Database initialized at {db_path} (standardized={use_standardized_schema})")
+        logging.info("Database initialized at %s (standardized=%s)", db_path, use_standardized_schema)
 
     def _apply_pragmas(self, conn: sqlite3.Connection) -> None:
         """Apply SQLite pragmas for better performance and resilience."""
@@ -206,7 +206,7 @@ class KeywordDatabase:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_volume ON keywords(volume DESC)")
             conn.commit()
         except sqlite3.Error as e:
-            logging.warning(f"Schema migration check/add failed: {e}")
+            logging.warning("Schema migration check/add failed: %s", e)
 
     def _init_database(self):
         """Inicializa la base de datos con el schema necesario.
@@ -379,7 +379,7 @@ class KeywordDatabase:
                 conn.commit()
                 return True
         except sqlite3.Error as e:
-            logging.error(f"Error inserting keyword {keyword.keyword}: {e}")
+            logging.error("Error inserting keyword %s: %s", keyword.keyword, e)
             return False
 
     def insert_keywords_batch(self, keywords: list[Keyword]) -> int:
@@ -463,13 +463,13 @@ class KeywordDatabase:
                             )
                         inserted += 1
                     except sqlite3.Error as e:
-                        logging.warning(f"Failed to insert keyword {keyword.keyword}: {e}")
+                        logging.warning("Failed to insert keyword %s: %s", keyword.keyword, e)
                         continue
                 conn.commit()
         except sqlite3.Error as e:
-            logging.error(f"Batch insert error: {e}")
+            logging.error("Batch insert error: %s", e)
 
-        logging.info(f"Inserted {inserted}/{len(keywords)} keywords")
+        logging.info("Inserted %d/%d keywords", inserted, len(keywords))
         return inserted
 
     def get_keywords(
@@ -541,7 +541,7 @@ class KeywordDatabase:
                 rows_returned=0,
                 filters=filters,
             )
-            logging.error(f"Error fetching keywords: {e}")
+            logging.error("Error fetching keywords: %s", e)
             return []
 
     def insert_run(self, run_id: str, metrics: dict) -> bool:
@@ -585,7 +585,7 @@ class KeywordDatabase:
                 conn.commit()
                 return True
         except sqlite3.Error as e:
-            logging.error(f"Error inserting run metrics: {e}")
+            logging.error("Error inserting run metrics: %s", e)
             return False
 
     def get_keyword_by_text(self, keyword_text: str) -> dict | None:
@@ -597,7 +597,7 @@ class KeywordDatabase:
                 row = cursor.fetchone()
                 return dict(row) if row else None
         except sqlite3.Error as e:
-            logging.error(f"Error fetching keyword {keyword_text}: {e}")
+            logging.error("Error fetching keyword %s: %s", keyword_text, e)
             return None
 
     def update_keyword_score(
@@ -643,8 +643,8 @@ class KeywordDatabase:
                 conn.commit()
                 return True
 
-        except Exception as e:
-            logging.error(f"Error updating keyword {keyword_text}: {e}")
+        except sqlite3.Error as e:
+            logging.error("Error updating keyword %s: %s", keyword_text, e)
             return False
 
     def get_stats(self) -> dict:
@@ -678,7 +678,7 @@ class KeywordDatabase:
 
                 return stats
         except sqlite3.Error as e:
-            logging.error(f"Error getting stats: {e}")
+            logging.error("Error getting stats: %s", e)
             return {}
 
     def cleanup_old_keywords(self, days: int = 30) -> int:
@@ -691,10 +691,10 @@ class KeywordDatabase:
                 )
                 conn.commit()
                 deleted = cursor.rowcount
-                logging.info(f"Cleaned up {deleted} old keywords")
+                logging.info("Cleaned up %d old keywords", deleted)
                 return deleted
         except sqlite3.Error as e:
-            logging.error(f"Error cleaning up keywords: {e}")
+            logging.error("Error cleaning up keywords: %s", e)
             return 0
 
     def fetch_all(self, query: str, params: tuple = ()) -> list[tuple]:
@@ -715,7 +715,7 @@ class KeywordDatabase:
                 results = cursor.fetchall()
                 return results
         except sqlite3.Error as e:
-            logging.error(f"Error executing query: {e}")
+            logging.error("Error executing query: %s", e)
             return []
 
         # =============================================================================
@@ -785,7 +785,7 @@ class KeywordDatabase:
                 logging.info("Enhanced schema tables created successfully")
 
         except sqlite3.Error as e:
-            logging.error(f"Error creating enhanced tables: {e}")
+            logging.error("Error creating enhanced tables: %s", e)
 
     def save_run_metadata(self, run_meta: RunMetadata) -> bool:
         """Save run metadata to database."""
@@ -824,7 +824,7 @@ class KeywordDatabase:
                 return True
 
         except sqlite3.Error as e:
-            logging.error(f"Error saving run metadata: {e}")
+            logging.error("Error saving run metadata: %s", e)
             return False
 
     def save_cluster_metadata(self, cluster_meta: ClusterMetadata) -> bool:
@@ -857,7 +857,7 @@ class KeywordDatabase:
                 return True
 
         except sqlite3.Error as e:
-            logging.error(f"Error saving cluster metadata: {e}")
+            logging.error("Error saving cluster metadata: %s", e)
             return False
 
     def save_enhanced_keyword(self, enhanced_kw: EnhancedKeyword) -> bool:
@@ -905,7 +905,7 @@ class KeywordDatabase:
                 return True
 
         except sqlite3.Error as e:
-            logging.error(f"Error saving enhanced keyword: {e}")
+            logging.error("Error saving enhanced keyword: %s", e)
             return False
 
     def get_run_metadata(self, run_id: str) -> dict[str, Any] | None:
@@ -918,7 +918,7 @@ class KeywordDatabase:
                 return dict(row) if row else None
 
         except sqlite3.Error as e:
-            logging.error(f"Error fetching run metadata: {e}")
+            logging.error("Error fetching run metadata: %s", e)
             return None
 
     def get_cluster_metadata(self, run_id: str) -> list[dict[str, Any]]:
@@ -933,7 +933,7 @@ class KeywordDatabase:
                 return [dict(row) for row in cursor.fetchall()]
 
         except sqlite3.Error as e:
-            logging.error(f"Error fetching cluster metadata: {e}")
+            logging.error("Error fetching cluster metadata: %s", e)
             return []
 
     # =============================================================================
@@ -975,7 +975,7 @@ class KeywordDatabase:
                 return True
 
         except sqlite3.Error as e:
-            logging.error(f"Error creating run v2: {e}")
+            logging.error("Error creating run v2: %s", e)
             return False
 
     def insert_keyword_v2(self, keyword: EnhancedKeyword) -> bool:
@@ -1018,7 +1018,7 @@ class KeywordDatabase:
                 return True
 
         except sqlite3.Error as e:
-            logging.error(f"Error inserting keyword v2: {e}")
+            logging.error("Error inserting keyword v2: %s", e)
             return False
 
     def create_cluster_v2(self, cluster: ClusterMetadata) -> bool:
@@ -1057,7 +1057,7 @@ class KeywordDatabase:
                 return True
 
         except sqlite3.Error as e:
-            logging.error(f"Error creating cluster v2: {e}")
+            logging.error("Error creating cluster v2: %s", e)
             return False
 
     def get_keywords_by_run_v2(
@@ -1111,7 +1111,7 @@ class KeywordDatabase:
                 return keywords
 
         except sqlite3.Error as e:
-            logging.error(f"Error getting keywords by run v2: {e}")
+            logging.error("Error getting keywords by run v2: %s", e)
             return []
 
     def get_schema_info_v2(self) -> dict:
@@ -1127,7 +1127,7 @@ class KeywordDatabase:
 
             if not required_tables.issubset(existing_tables):
                 missing = required_tables - existing_tables
-                logging.error(f"Missing required tables: {missing}")
+                logging.error("Missing required tables: %s", missing)
                 return False
 
             # Check minimum number of indexes
@@ -1141,8 +1141,8 @@ class KeywordDatabase:
             logging.info("Schema v2.0.0 validation passed")
             return True
 
-        except Exception as e:
-            logging.error(f"Schema validation failed: {e}")
+        except sqlite3.Error as e:
+            logging.error("Schema validation failed: %s", e)
             return False
 
     def get_performance_metrics(self) -> dict:
@@ -1170,5 +1170,5 @@ class KeywordDatabase:
             logging.info(f"Total runs: {db_stats.get('total_runs', 0)}")
             logging.info("==================================")
 
-        except Exception as e:
-            logging.error(f"Error generating performance report: {e}")
+        except sqlite3.Error as e:
+            logging.error("Error generating performance report: %s", e)

@@ -63,14 +63,17 @@ class KeywordExporter:
             )
 
             logger.info(
-                f"Standardized CSV export complete: {export_metadata.record_count} keywords "
-                f"exported to {filepath} (v{export_metadata.export_version})"
+                "Standardized CSV export complete: %s keywords "
+                "exported to %s (v%s)",
+                export_metadata.record_count,
+                filepath,
+                export_metadata.export_version
             )
 
             return filepath
 
-        except Exception as e:
-            logger.error(f"CSV export failed: {e}")
+        except OSError as e:
+            logger.error("CSV export failed: %s", e)
             # Fallback to legacy export for backward compatibility
             return self._legacy_export_to_csv(keywords, filename, scoring_metadata)
 
@@ -174,11 +177,11 @@ class KeywordExporter:
 
                     writer.writerow(row)
 
-            logging.info(f"CSV report with {len(keywords)} keywords exported to {filepath}")
+            logging.info("CSV report with %s keywords exported to %s", len(keywords), filepath)
             return str(filepath)
 
-        except Exception as e:
-            logging.error(f"Error exporting CSV: {e}")
+        except OSError as e:
+            logging.error("Error exporting CSV: %s", e)
             return ""
 
     def export_to_pdf(
@@ -192,8 +195,8 @@ class KeywordExporter:
             content = f"Report: {title}\nKeywords: {len(keywords)}"
             filepath.write_text(content, encoding="utf-8")
             return str(filepath)
-        except Exception as e:
-            logging.error(f"Error exporting PDF: {e}")
+        except OSError as e:
+            logging.error("Error exporting PDF: %s", e)
             return ""
 
     def export_briefs(
@@ -204,7 +207,8 @@ class KeywordExporter:
     ):
         """Export cluster-based SEO briefs."""
         if not dirname:
-            dirname = f"briefs_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            geo_suffix = f"_{geo}" if geo else ""
+            dirname = f"briefs_{datetime.now().strftime('%Y%m%d_%H%M%S')}{geo_suffix}"
         briefs_dir = self.export_dir / dirname
         briefs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -214,8 +218,8 @@ class KeywordExporter:
                     content = f"# {cluster_key}\n\nKeywords: {len(items)}\n"
                     (briefs_dir / f"{cluster_key}.md").write_text(content, encoding="utf-8")
             return str(briefs_dir)
-        except Exception as e:
-            logging.error(f"Error exporting briefs: {e}")
+        except OSError as e:
+            logging.error("Error exporting briefs: %s", e)
             return ""
 
     def export_cluster_report(
@@ -234,14 +238,17 @@ class KeywordExporter:
             )
 
             logger.info(
-                f"Standardized cluster report complete: {export_metadata.record_count} clusters "
-                f"exported to {filepath} (v{export_metadata.export_version})"
+                "Standardized cluster report complete: %s clusters "
+                "exported to %s (v%s)",
+                export_metadata.record_count,
+                filepath,
+                export_metadata.export_version
             )
 
             return filepath
 
-        except Exception as e:
-            logger.error(f"Cluster export failed: {e}")
+        except OSError as e:
+            logger.error("Cluster export failed: %s", e)
             return self._legacy_export_cluster_report(clusters, filename)
 
     def _legacy_export_cluster_report(
@@ -266,8 +273,8 @@ class KeywordExporter:
                             }
                         )
             return str(filepath)
-        except Exception as e:
-            logging.error(f"Error exporting cluster report: {e}")
+        except OSError as e:
+            logging.error("Error exporting cluster report: %s", e)
             return ""
 
     def export_clusters_summary(
@@ -291,6 +298,6 @@ class KeywordExporter:
                         {"cluster_id": cluster_id, "size": size, "avg_score": round(avg_score, 2)}
                     )
             return str(filepath)
-        except Exception as e:
-            logging.error(f"Error exporting clusters summary: {e}")
+        except OSError as e:
+            logging.error("Error exporting clusters summary: %s", e)
             return ""
